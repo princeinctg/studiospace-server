@@ -148,6 +148,9 @@ for (const b of data.bookings) {
   } else if (b.id === "bkg_mvxjead3ef9r") {
     console.log(`[Reconcile] Identified redundant test record ${b.id} created during title mutation test. Cleaning up.`);
     // Omit duplicate test record
+  } else if (b.studio?.id === "studio-daylight-loft" || b.studio?._id === "studio-daylight-loft") {
+    b.studio.title = standardStudios[0].title;
+    cleanedBookings.push(b);
   } else {
     // Keep legitimate record completely unchanged
     cleanedBookings.push(b);
