@@ -13,6 +13,7 @@ export interface StoredUser {
   phone?: string;
   bio?: string;
   googleId?: string;
+  bookmarks?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -528,6 +529,39 @@ class DataStore {
     booking.updatedAt = new Date().toISOString();
     this.save();
     return booking;
+  }
+
+  // Bookmark Operations
+  getBookmarks(userId: string): StoredStudio[] {
+    const user = this.findUserById(userId);
+    const bookmarkIds = user?.bookmarks || [];
+    return this.db.studios.filter(
+      (s) => bookmarkIds.includes(s.id) || bookmarkIds.includes(s._id)
+    );
+  }
+
+  getBookmarkIds(userId: string): string[] {
+    const user = this.findUserById(userId);
+    return user?.bookmarks || [];
+  }
+
+  addBookmark(userId: string, studioId: string): string[] {
+    const user = this.findUserById(userId);
+    if (!user) return [];
+    if (!user.bookmarks) user.bookmarks = [];
+    if (!user.bookmarks.includes(studioId)) {
+      user.bookmarks.push(studioId);
+      this.save();
+    }
+    return user.bookmarks;
+  }
+
+  removeBookmark(userId: string, studioId: string): string[] {
+    const user = this.findUserById(userId);
+    if (!user || !user.bookmarks) return [];
+    user.bookmarks = user.bookmarks.filter((id) => id !== studioId);
+    this.save();
+    return user.bookmarks;
   }
 }
 

@@ -12,6 +12,7 @@ export interface IUser extends Document {
   phone?: string;
   bio?: string;
   googleId?: string;
+  bookmarks?: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidate: string): Promise<boolean>;
@@ -60,6 +61,12 @@ const UserSchema = new Schema<IUser>(
       type: String,
       sparse: true,
     },
+    bookmarks: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Studio",
+      },
+    ],
   },
   {
     timestamps: true,

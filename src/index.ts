@@ -8,6 +8,7 @@ import { connectDB, disconnectDB } from "./config/database";
 import authRoutes from "./routes/auth.routes";
 import studioRoutes from "./routes/studio.routes";
 import bookingRoutes from "./routes/booking.routes";
+import bookmarkRoutes from "./routes/bookmark.routes";
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use("/api", apiLimiter);
 app.use("/api/auth", authRoutes);
 app.use("/api/studios", studioRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/api/bookmarks", bookmarkRoutes);
 
 // Root API welcome
 app.get("/api", (_req: Request, res: Response) => {
