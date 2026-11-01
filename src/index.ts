@@ -6,6 +6,7 @@ import { ENV } from "./config/env";
 import { connectDB, disconnectDB } from "./config/database";
 import authRoutes from "./routes/auth.routes";
 import studioRoutes from "./routes/studio.routes";
+import bookingRoutes from "./routes/booking.routes";
 
 const app = express();
 
@@ -36,6 +37,7 @@ app.get("/health", (_req: Request, res: Response) => {
 // API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/studios", studioRoutes);
+app.use("/api/bookings", bookingRoutes);
 
 // Root API welcome
 app.get("/api", (_req: Request, res: Response) => {
