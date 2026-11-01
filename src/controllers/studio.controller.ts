@@ -259,6 +259,15 @@ export async function updateStudio(
       return;
     }
 
+    const parsed = updateStudioSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        error: "Validation failed",
+        details: parsed.error.issues.map((i) => i.message),
+      });
+      return;
+    }
+
     const id = String(req.params.id);
 
     if (mongoose.connection.readyState === 1) {
@@ -274,15 +283,6 @@ export async function updateStudio(
       ) {
         res.status(403).json({
           error: "Forbidden: You do not own this studio listing.",
-        });
-        return;
-      }
-
-      const parsed = updateStudioSchema.safeParse(req.body);
-      if (!parsed.success) {
-        res.status(400).json({
-          error: "Validation failed",
-          details: parsed.error.issues.map((i) => i.message),
         });
         return;
       }
@@ -311,7 +311,7 @@ export async function updateStudio(
       return;
     }
 
-    const updated = store.updateStudio(id, req.body);
+    const updated = store.updateStudio(id, parsed.data);
     res.status(200).json({
       message: "Studio listing updated successfully",
       studio: updated,

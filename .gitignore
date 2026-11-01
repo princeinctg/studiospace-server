@@ -25,3 +25,6 @@ yarn-error.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local database store
+.data/

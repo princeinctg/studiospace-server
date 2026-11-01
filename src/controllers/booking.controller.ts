@@ -57,6 +57,17 @@ export async function createBooking(
       const startMins = toMinutes(startTime);
       const endMins = toMinutes(endTime);
       const durationHours = (endMins - startMins) / 60;
+
+      if (durationHours <= 0 || durationHours > 24) {
+        res.status(400).json({ error: "Booking duration must be between 1 and 24 hours" });
+        return;
+      }
+
+      if (studio.pricePerHour < 20 || studio.pricePerHour > 5000) {
+        res.status(400).json({ error: "Studio hourly rate is out of valid bounds ($20 - $5,000/hr)" });
+        return;
+      }
+
       const totalPrice = Math.round(durationHours * studio.pricePerHour);
 
       // Conflict Check in MongoDB
@@ -133,6 +144,17 @@ export async function createBooking(
     const startMins = toMinutes(startTime);
     const endMins = toMinutes(endTime);
     const durationHours = (endMins - startMins) / 60;
+
+    if (durationHours <= 0 || durationHours > 24) {
+      res.status(400).json({ error: "Booking duration must be between 1 and 24 hours" });
+      return;
+    }
+
+    if (studio.pricePerHour < 20 || studio.pricePerHour > 5000) {
+      res.status(400).json({ error: "Studio hourly rate is out of valid bounds ($20 - $5,000/hr)" });
+      return;
+    }
+
     const totalPrice = Math.round(durationHours * studio.pricePerHour);
 
     const booking = store.createBooking({
@@ -272,6 +294,31 @@ export async function updateBookingStatus(
         message: `Booking status updated to ${status}`,
         booking,
       });
+      return;
+    }
+
+    const existingBooking = store.getBookingById(id);
+    if (!existingBooking) {
+      res.status(404).json({ error: "Booking not found" });
+      return;
+    }
+
+    const isGuest =
+      (existingBooking.guest?.id || existingBooking.guest?._id || existingBooking.guest) === req.user.userId;
+    const studioHost =
+      existingBooking.studio?.host?.id ||
+      existingBooking.studio?.host?._id ||
+      existingBooking.studio?.host;
+    const isHost = studioHost === req.user.userId;
+    const isAdmin = req.user.role === "admin";
+
+    if (!isGuest && !isHost && !isAdmin) {
+      res.status(403).json({ error: "Forbidden: Not authorized to update this booking." });
+      return;
+    }
+
+    if (isGuest && !isHost && !isAdmin && status !== "cancelled") {
+      res.status(403).json({ error: "Guests are only permitted to cancel bookings." });
       return;
     }
 

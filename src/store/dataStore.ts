@@ -90,17 +90,6 @@ class DataStore {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
 
-    if (fs.existsSync(STORE_PATH)) {
-      try {
-        const raw = fs.readFileSync(STORE_PATH, "utf-8");
-        this.db = JSON.parse(raw);
-        this.initialized = true;
-        return;
-      } catch (e) {
-        console.warn("[DataStore] Reinitializing store file:", e);
-      }
-    }
-
     // Seed initial demo data
     const hostHash = bcrypt.hashSync("HostPassword123!", 10);
     const guestHash = bcrypt.hashSync("GuestPassword123!", 10);
@@ -260,6 +249,21 @@ class DataStore {
         updatedAt: new Date().toISOString(),
       },
     ];
+
+    if (fs.existsSync(STORE_PATH)) {
+      try {
+        const raw = fs.readFileSync(STORE_PATH, "utf-8");
+        this.db = JSON.parse(raw);
+        if (!this.db.studios || this.db.studios.length === 0) {
+          this.db.studios = initialStudios;
+          this.save();
+        }
+        this.initialized = true;
+        return;
+      } catch (e) {
+        console.warn("[DataStore] Reinitializing store file:", e);
+      }
+    }
 
     this.db = {
       users: [initialHost, initialGuest],
@@ -505,6 +509,10 @@ class DataStore {
         myStudioIds.includes(b.studio?._id) ||
         myStudioIds.includes(b.studio)
     );
+  }
+
+  getBookingById(id: string): StoredBooking | undefined {
+    return this.db.bookings.find((b) => b.id === id || b._id === id);
   }
 
   updateBookingStatus(
