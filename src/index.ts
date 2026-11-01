@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+import rateLimit from "express-rate-limit";
 import { ENV } from "./config/env";
 import { connectDB, disconnectDB } from "./config/database";
 import authRoutes from "./routes/auth.routes";
@@ -33,6 +34,16 @@ app.get("/health", (_req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Rate limiter for API routes
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // limit each IP to 200 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests from this IP, please try again after 15 minutes" },
+});
+app.use("/api", apiLimiter);
 
 // API Routes
 app.use("/api/auth", authRoutes);
