@@ -4,6 +4,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import { ENV } from "./config/env";
 import { connectDB, disconnectDB } from "./config/database";
+import authRoutes from "./routes/auth.routes";
 
 const app = express();
 
@@ -30,6 +31,9 @@ app.get("/health", (_req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// API Routes
+app.use("/api/auth", authRoutes);
 
 // Root API welcome
 app.get("/api", (_req: Request, res: Response) => {
