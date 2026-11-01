@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import { ENV } from "./config/env";
+import { connectDB, disconnectDB } from "./config/database";
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.get("/health", (_req: Request, res: Response) => {
   res.status(200).json({
     status: "ok",
     service: "StudioSpace API Server",
+    database: "connected",
     timestamp: new Date().toISOString(),
   });
 });
@@ -53,9 +55,21 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 if (process.env.NODE_ENV !== "test") {
-  app.listen(ENV.PORT, () => {
-    console.log(`[StudioSpace Server] Listening on port ${ENV.PORT}`);
+  connectDB().then(() => {
+    app.listen(ENV.PORT, () => {
+      console.log(`[StudioSpace Server] Listening on port ${ENV.PORT}`);
+    });
   });
+
+  // Graceful shutdown handling
+  const handleExit = async () => {
+    console.log("[Server] Shutting down gracefully...");
+    await disconnectDB();
+    process.exit(0);
+  };
+
+  process.on("SIGINT", handleExit);
+  process.on("SIGTERM", handleExit);
 }
 
 export default app;
