@@ -242,9 +242,9 @@ const demoStudios = [
             coordinates: { lat: 37.7901, lng: -122.3995 },
         },
         images: [
-            "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&w=1200&q=85",
-            "https://images.unsplash.com/photo-1578382171692-304e0ec89c34?auto=format&fit=crop&w=1200&q=85",
-            "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?auto=format&fit=crop&w=1200&q=85",
+            "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=1200&q=85",
+            "https://images.unsplash.com/photo-1606920669741-c8ba74262a94?auto=format&fit=crop&w=1200&q=85",
+            "https://images.unsplash.com/photo-1589186161289-9eb8898086df?auto=format&fit=crop&w=1200&q=85",
         ],
         rating: 4.9,
         reviewCount: 45,
