@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
+    "prestart": "npm run build",
     "start": "node dist/index.js",
     "seed": "ts-node-dev --transpile-only src/seed/seed.ts",
     "lint": "tsc --noEmit"
@@ -20,6 +21,12 @@
   "author": "Prince",
   "license": "ISC",
   "dependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^22.8.4",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -30,16 +37,10 @@
     "mongoose": "^8.7.3",
     "morgan": "^1.10.0",
     "serverless-http": "^4.0.0",
+    "typescript": "^5.6.3",
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
-    "@types/jsonwebtoken": "^9.0.7",
-    "@types/morgan": "^1.9.9",
-    "@types/node": "^22.8.4",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^5.6.3"
+    "ts-node-dev": "^2.0.0"
   }
 }

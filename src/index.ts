@@ -103,9 +103,12 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 if (!process.env.NETLIFY && process.env.NODE_ENV !== "test") {
+  const PORT = Number(process.env.PORT) || Number(ENV.PORT) || 5000;
+  const HOST = "0.0.0.0";
+
   connectDB().then(() => {
-    app.listen(ENV.PORT, () => {
-      console.log(`[StudioSpace Server] Listening on port ${ENV.PORT}`);
+    app.listen(PORT, HOST, () => {
+      console.log(`[StudioSpace Server] Listening on ${HOST}:${PORT} (process.env.PORT: ${process.env.PORT || "default"})`);
     });
   });
 

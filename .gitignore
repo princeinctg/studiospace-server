@@ -4,7 +4,7 @@ node_modules
 .pnp.js
 
 # Build output
-dist
+# dist committed for zero-failure production deployments on Render / PaaS
 build
 
 # Environment variables (NEVER COMMIT .env)
