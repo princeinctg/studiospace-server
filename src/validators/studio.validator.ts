@@ -42,6 +42,11 @@ export const createStudioSchema = z.object({
   category: z.enum(["photography", "film", "recording", "podcast", "dance", "art"]),
   amenities: z.array(z.string()).default([]),
   pricePerHour: hourlyRateValidation,
+  securityDeposit: z.number().min(0).default(0).optional(),
+  defaultBookingDuration: z.number().min(1).default(8).optional(),
+  hostName: z.string().optional(),
+  hostEmail: z.string().optional(),
+  imageUrl: z.string().optional(),
   location: z.object({
     address: z.string().min(3, "Address is required"),
     city: z.string().min(2, "City is required"),
@@ -54,7 +59,7 @@ export const createStudioSchema = z.object({
       })
       .optional(),
   }),
-  images: z.array(z.string().url("Each image must be a valid URL")).min(1, "At least one image is required"),
+  images: z.array(z.string().url("Each image must be a valid URL")).min(1, "At least one image is required").optional(),
   capacity: z.number().min(1).default(10),
   squareFeet: z.number().min(50).default(800),
   tags: z.array(z.string()).default([]),

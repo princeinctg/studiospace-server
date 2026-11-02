@@ -429,9 +429,9 @@ class DataStore {
         }
         return result;
     }
-    getFeaturedStudios() {
+    getFeaturedStudios(limit = 8) {
         const featured = this.db.studios.filter((s) => s.isAvailable && s.featured);
-        return featured.length > 0 ? featured.slice(0, 6) : this.db.studios.slice(0, 6);
+        return featured.length > 0 ? featured.slice(0, limit) : this.db.studios.slice(0, limit);
     }
     getStudioById(idOrSlug) {
         return this.db.studios.find((s) => s.id === idOrSlug || s._id === idOrSlug || s.slug === idOrSlug);
@@ -455,6 +455,7 @@ class DataStore {
             category: studioData.category || "photography",
             amenities: studioData.amenities || [],
             pricePerHour: studioData.pricePerHour || 100,
+            securityDeposit: studioData.securityDeposit || 0,
             location: studioData.location || { address: "", city: "Brooklyn", country: "USA" },
             images: studioData.images || [],
             host: {

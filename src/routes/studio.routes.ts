@@ -20,6 +20,7 @@ router.get("/:id", getStudioById);
 
 // Protected routes (Host/Admin)
 router.post("/", authenticate, createStudio);
+router.post("/create", authenticate, createStudio);
 router.put("/:id", authenticate, updateStudio);
 router.delete("/:id", authenticate, deleteStudio);
 

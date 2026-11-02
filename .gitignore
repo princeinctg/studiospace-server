@@ -10,6 +10,9 @@ build
 # Environment variables (NEVER COMMIT secrets to version control)
 .env
 .env.local
+.env.development
+.env.production
+.env*.local
 .env.*
 !.env.example
 

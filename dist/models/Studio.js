@@ -79,6 +79,11 @@ const StudioSchema = new mongoose_1.Schema({
         required: [true, "Hourly rate is required"],
         min: [1, "Price must be at least 1"],
     },
+    securityDeposit: {
+        type: Number,
+        default: 0,
+        min: [0, "Security deposit cannot be negative"],
+    },
     location: {
         type: LocationSchema,
         required: true,

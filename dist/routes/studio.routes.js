@@ -11,6 +11,7 @@ router.get("/my-listings", auth_1.authenticate, studio_controller_1.getMyListing
 router.get("/:id", studio_controller_1.getStudioById);
 // Protected routes (Host/Admin)
 router.post("/", auth_1.authenticate, studio_controller_1.createStudio);
+router.post("/create", auth_1.authenticate, studio_controller_1.createStudio);
 router.put("/:id", auth_1.authenticate, studio_controller_1.updateStudio);
 router.delete("/:id", auth_1.authenticate, studio_controller_1.deleteStudio);
 exports.default = router;

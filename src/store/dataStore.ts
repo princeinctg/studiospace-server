@@ -28,6 +28,7 @@ export interface StoredStudio {
   category: "photography" | "film" | "recording" | "podcast" | "dance" | "art";
   amenities: string[];
   pricePerHour: number;
+  securityDeposit?: number;
   location: {
     address: string;
     city: string;
@@ -522,9 +523,9 @@ class DataStore {
     return result;
   }
 
-  getFeaturedStudios(): StoredStudio[] {
+  getFeaturedStudios(limit = 8): StoredStudio[] {
     const featured = this.db.studios.filter((s) => s.isAvailable && s.featured);
-    return featured.length > 0 ? featured.slice(0, 6) : this.db.studios.slice(0, 6);
+    return featured.length > 0 ? featured.slice(0, limit) : this.db.studios.slice(0, limit);
   }
 
   getStudioById(idOrSlug: string): StoredStudio | undefined {
@@ -556,6 +557,7 @@ class DataStore {
       category: studioData.category || "photography",
       amenities: studioData.amenities || [],
       pricePerHour: studioData.pricePerHour || 100,
+      securityDeposit: studioData.securityDeposit || 0,
       location: studioData.location || { address: "", city: "Brooklyn", country: "USA" },
       images: studioData.images || [],
       host: {

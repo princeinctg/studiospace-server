@@ -30,6 +30,11 @@ exports.createStudioSchema = zod_1.z.object({
     category: zod_1.z.enum(["photography", "film", "recording", "podcast", "dance", "art"]),
     amenities: zod_1.z.array(zod_1.z.string()).default([]),
     pricePerHour: exports.hourlyRateValidation,
+    securityDeposit: zod_1.z.number().min(0).default(0).optional(),
+    defaultBookingDuration: zod_1.z.number().min(1).default(8).optional(),
+    hostName: zod_1.z.string().optional(),
+    hostEmail: zod_1.z.string().optional(),
+    imageUrl: zod_1.z.string().optional(),
     location: zod_1.z.object({
         address: zod_1.z.string().min(3, "Address is required"),
         city: zod_1.z.string().min(2, "City is required"),
@@ -42,7 +47,7 @@ exports.createStudioSchema = zod_1.z.object({
         })
             .optional(),
     }),
-    images: zod_1.z.array(zod_1.z.string().url("Each image must be a valid URL")).min(1, "At least one image is required"),
+    images: zod_1.z.array(zod_1.z.string().url("Each image must be a valid URL")).min(1, "At least one image is required").optional(),
     capacity: zod_1.z.number().min(1).default(10),
     squareFeet: zod_1.z.number().min(50).default(800),
     tags: zod_1.z.array(zod_1.z.string()).default([]),

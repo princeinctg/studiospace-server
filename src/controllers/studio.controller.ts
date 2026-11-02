@@ -109,19 +109,22 @@ export async function getAllStudios(req: Request, res: Response): Promise<void> 
   }
 }
 
-export async function getFeaturedStudios(_req: Request, res: Response): Promise<void> {
+export async function getFeaturedStudios(req: Request, res: Response): Promise<void> {
   try {
+    const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+    const limitNum = limitParam && !isNaN(limitParam) ? Math.min(50, Math.max(1, limitParam)) : 8;
+
     if (mongoose.connection.readyState === 1) {
       const featured = await Studio.find({ isAvailable: true, featured: true })
         .populate("host", "name email avatar")
-        .limit(6)
+        .limit(limitNum)
         .lean();
 
       if (featured.length < 3) {
         const topRated = await Studio.find({ isAvailable: true })
           .populate("host", "name email avatar")
           .sort({ rating: -1 })
-          .limit(6)
+          .limit(limitNum)
           .lean();
         res.status(200).json({ studios: topRated });
         return;
@@ -131,7 +134,7 @@ export async function getFeaturedStudios(_req: Request, res: Response): Promise<
       return;
     }
 
-    const featured = store.getFeaturedStudios();
+    const featured = store.getFeaturedStudios(limitNum);
     res.status(200).json({ studios: featured });
   } catch (error: any) {
     console.error("Get Featured Studios Error:", error);
@@ -217,10 +220,20 @@ export async function createStudio(
       return;
     }
 
+    const studioImages =
+      parsed.data.images && parsed.data.images.length > 0
+        ? parsed.data.images
+        : parsed.data.imageUrl
+        ? [parsed.data.imageUrl]
+        : [
+            "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=1200&q=85",
+          ];
+
     if (mongoose.connection.readyState === 1) {
       const slug = slugify(parsed.data.title);
       const studio = await Studio.create({
         ...parsed.data,
+        images: studioImages,
         slug,
         host: req.user.userId,
       });
@@ -234,11 +247,14 @@ export async function createStudio(
 
     const hostUser = store.findUserById(req.user.userId) || {
       id: req.user.userId,
-      name: "Host User",
-      email: req.user.email,
+      name: parsed.data.hostName || "Host User",
+      email: parsed.data.hostEmail || req.user.email,
     };
 
-    const studio = store.createStudio(parsed.data, hostUser as any);
+    const studio = store.createStudio(
+      { ...parsed.data, images: studioImages },
+      hostUser as any
+    );
     res.status(201).json({
       message: "Studio listed successfully",
       studio,

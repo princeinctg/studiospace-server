@@ -26,6 +26,7 @@ export interface IStudio extends Document {
   category: StudioCategory;
   amenities: string[];
   pricePerHour: number;
+  securityDeposit?: number;
   location: ILocation;
   images: string[];
   host: Types.ObjectId;
@@ -90,6 +91,11 @@ const StudioSchema = new Schema<IStudio>(
       type: Number,
       required: [true, "Hourly rate is required"],
       min: [1, "Price must be at least 1"],
+    },
+    securityDeposit: {
+      type: Number,
+      default: 0,
+      min: [0, "Security deposit cannot be negative"],
     },
     location: {
       type: LocationSchema,

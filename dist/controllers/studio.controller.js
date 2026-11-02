@@ -102,18 +102,20 @@ async function getAllStudios(req, res) {
         res.status(500).json({ error: "Failed to fetch studio listings" });
     }
 }
-async function getFeaturedStudios(_req, res) {
+async function getFeaturedStudios(req, res) {
     try {
+        const limitParam = req.query.limit ? parseInt(req.query.limit, 10) : undefined;
+        const limitNum = limitParam && !isNaN(limitParam) ? Math.min(50, Math.max(1, limitParam)) : 8;
         if (mongoose_1.default.connection.readyState === 1) {
             const featured = await Studio_1.Studio.find({ isAvailable: true, featured: true })
                 .populate("host", "name email avatar")
-                .limit(6)
+                .limit(limitNum)
                 .lean();
             if (featured.length < 3) {
                 const topRated = await Studio_1.Studio.find({ isAvailable: true })
                     .populate("host", "name email avatar")
                     .sort({ rating: -1 })
-                    .limit(6)
+                    .limit(limitNum)
                     .lean();
                 res.status(200).json({ studios: topRated });
                 return;
@@ -121,7 +123,7 @@ async function getFeaturedStudios(_req, res) {
             res.status(200).json({ studios: featured });
             return;
         }
-        const featured = dataStore_1.store.getFeaturedStudios();
+        const featured = dataStore_1.store.getFeaturedStudios(limitNum);
         res.status(200).json({ studios: featured });
     }
     catch (error) {
@@ -189,10 +191,18 @@ async function createStudio(req, res) {
             });
             return;
         }
+        const studioImages = parsed.data.images && parsed.data.images.length > 0
+            ? parsed.data.images
+            : parsed.data.imageUrl
+                ? [parsed.data.imageUrl]
+                : [
+                    "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=1200&q=85",
+                ];
         if (mongoose_1.default.connection.readyState === 1) {
             const slug = slugify(parsed.data.title);
             const studio = await Studio_1.Studio.create({
                 ...parsed.data,
+                images: studioImages,
                 slug,
                 host: req.user.userId,
             });
@@ -204,10 +214,10 @@ async function createStudio(req, res) {
         }
         const hostUser = dataStore_1.store.findUserById(req.user.userId) || {
             id: req.user.userId,
-            name: "Host User",
-            email: req.user.email,
+            name: parsed.data.hostName || "Host User",
+            email: parsed.data.hostEmail || req.user.email,
         };
-        const studio = dataStore_1.store.createStudio(parsed.data, hostUser);
+        const studio = dataStore_1.store.createStudio({ ...parsed.data, images: studioImages }, hostUser);
         res.status(201).json({
             message: "Studio listed successfully",
             studio,
