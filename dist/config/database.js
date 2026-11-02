@@ -42,27 +42,34 @@ function getDatabaseStatus() {
         lastError: state.lastError,
     };
 }
-async function connectDB() {
+let lastConnectionAttempt = 0;
+const RECONNECT_COOLDOWN_MS = 20000; // 20 seconds cooldown if connection failed
+async function connectDB(force = false) {
     if (state.isConnected && mongoose_1.default.connection.readyState === 1) {
         return mongoose_1.default;
     }
+    const now = Date.now();
+    if (!force && now - lastConnectionAttempt < RECONNECT_COOLDOWN_MS && state.lastError) {
+        return null;
+    }
+    lastConnectionAttempt = now;
     const sanitizedUri = getResolvedMongoUri();
     state.targetUri = sanitizedUri;
     if (!sanitizedUri) {
+        state.isConnected = false;
+        state.lastError = "MONGODB_URI is not configured";
         if (env_1.ENV.NODE_ENV === "production") {
-            state.isConnected = false;
-            state.lastError = "MONGODB_URI is not configured in production";
             console.error("[MongoDB Atlas] CRITICAL: No MONGODB_URI provided in production. Localhost fallback disabled.");
-            return null;
         }
+        return null;
     }
     try {
         mongoose_1.default.set("strictQuery", false);
         console.log(`[MongoDB Atlas] Attempting connection to: ${(0, mongoUri_1.maskMongoUri)(sanitizedUri)}`);
         const conn = await mongoose_1.default.connect(sanitizedUri, {
             dbName: "studiospace",
-            serverSelectionTimeoutMS: 10000,
-            connectTimeoutMS: 10000,
+            serverSelectionTimeoutMS: 5000,
+            connectTimeoutMS: 5000,
             autoIndex: true,
         });
         state.isConnected = true;

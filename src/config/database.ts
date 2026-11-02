@@ -47,21 +47,30 @@ export function getDatabaseStatus() {
   };
 }
 
-export async function connectDB(): Promise<typeof mongoose | null> {
+let lastConnectionAttempt = 0;
+const RECONNECT_COOLDOWN_MS = 20000; // 20 seconds cooldown if connection failed
+
+export async function connectDB(force = false): Promise<typeof mongoose | null> {
   if (state.isConnected && mongoose.connection.readyState === 1) {
     return mongoose;
   }
+
+  const now = Date.now();
+  if (!force && now - lastConnectionAttempt < RECONNECT_COOLDOWN_MS && state.lastError) {
+    return null;
+  }
+  lastConnectionAttempt = now;
 
   const sanitizedUri = getResolvedMongoUri();
   state.targetUri = sanitizedUri;
 
   if (!sanitizedUri) {
+    state.isConnected = false;
+    state.lastError = "MONGODB_URI is not configured";
     if (ENV.NODE_ENV === "production") {
-      state.isConnected = false;
-      state.lastError = "MONGODB_URI is not configured in production";
       console.error("[MongoDB Atlas] CRITICAL: No MONGODB_URI provided in production. Localhost fallback disabled.");
-      return null;
     }
+    return null;
   }
 
   try {
@@ -71,8 +80,8 @@ export async function connectDB(): Promise<typeof mongoose | null> {
 
     const conn = await mongoose.connect(sanitizedUri, {
       dbName: "studiospace",
-      serverSelectionTimeoutMS: 10000,
-      connectTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
       autoIndex: true,
     });
 
