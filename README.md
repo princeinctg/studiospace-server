@@ -2,8 +2,9 @@
 
 > Production-ready, secure REST API backend for StudioSpace — the premium cinematic creative studio marketplace.
 
+* **Live Frontend (Netlify)**: https://studiospace-luxury.netlify.app/
 * **Live Frontend (Vercel)**: https://studiospace-client-nine.vercel.app/
-* **Live Backend API (Render)**: https://studiospace-server.onrender.com/
+* **Live Backend API (Render)**: https://studiospace-server-f9ek.onrender.com/
 
 ---
 
