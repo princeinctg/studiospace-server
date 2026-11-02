@@ -10,6 +10,7 @@ export const registerSchema = z.object({
     .regex(/[a-z]/, "Password must contain at least one lowercase letter"),
   role: z.enum(["guest", "host"]).default("guest").optional(),
   phone: z.string().optional(),
+  avatar: z.string().url("Avatar must be a valid URL").or(z.literal("")).optional(),
 });
 
 export const loginSchema = z.object({

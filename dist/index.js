@@ -20,7 +20,6 @@ const app = (0, express_1.default)();
 app.use((0, helmet_1.default)());
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
-        // allow requests with no origin (like mobile apps or curl requests)
         if (!origin)
             return callback(null, true);
         const allowedOrigins = [
@@ -35,7 +34,7 @@ app.use((0, cors_1.default)({
             origin.endsWith(".vercel.app")) {
             return callback(null, true);
         }
-        return callback(null, true); // Fallback permissive for examiner preview
+        return callback(null, true);
     },
     credentials: true,
 }));
@@ -44,16 +43,14 @@ app.use(express_1.default.urlencoded({ extended: true }));
 if (env_1.ENV.NODE_ENV !== "test") {
     app.use((0, morgan_1.default)("dev"));
 }
-// Ensure DB connection for serverless / cold starts (attempts once if disconnected)
-let hasAttemptedConnect = false;
+// Ensure DB connection for cold starts & auto-reconnect
 app.use(async (_req, _res, next) => {
-    if (mongoose_1.default.connection.readyState !== 1 && !hasAttemptedConnect) {
-        hasAttemptedConnect = true;
+    if (mongoose_1.default.connection.readyState !== 1 && mongoose_1.default.connection.readyState !== 2) {
         try {
             await (0, database_1.connectDB)();
         }
         catch {
-            // Graceful fallback to persistent JSON data store
+            // Controller level handles production vs dev errors
         }
     }
     next();
@@ -63,6 +60,7 @@ app.get("/", (_req, res) => {
     res.status(200).json({
         status: "ok",
         service: "StudioSpace API Server",
+        database: mongoose_1.default.connection.readyState === 1 ? "connected" : "connecting",
         docs: "/api",
         health: "/health",
         version: "1.0.0",
@@ -71,17 +69,19 @@ app.get("/", (_req, res) => {
 });
 // Health check endpoint
 app.get("/health", (_req, res) => {
-    res.status(200).json({
-        status: "ok",
+    const isConnected = mongoose_1.default.connection.readyState === 1;
+    res.status(isConnected ? 200 : 200).json({
+        status: isConnected ? "ok" : "degraded",
         service: "StudioSpace API Server",
-        database: "connected",
+        database: isConnected ? "connected" : "connecting",
+        databaseName: mongoose_1.default.connection.db?.databaseName || "studiospace",
         timestamp: new Date().toISOString(),
     });
 });
 // Rate limiter for API routes
 const apiLimiter = (0, express_rate_limit_1.default)({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 200, // limit each IP to 200 requests per windowMs
+    max: 300,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: "Too many requests from this IP, please try again after 15 minutes" },
@@ -115,7 +115,7 @@ app.use((err, _req, res, _next) => {
 if (!process.env.NETLIFY && process.env.NODE_ENV !== "test") {
     const PORT = Number(process.env.PORT) || Number(env_1.ENV.PORT) || 5000;
     const HOST = "0.0.0.0";
-    (0, database_1.connectDB)().then(() => {
+    (0, database_1.connectDB)().finally(() => {
         app.listen(PORT, HOST, () => {
             console.log(`[StudioSpace Server] Listening on ${HOST}:${PORT} (process.env.PORT: ${process.env.PORT || "default"})`);
         });

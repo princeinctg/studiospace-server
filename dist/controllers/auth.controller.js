@@ -6,6 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.register = register;
 exports.login = login;
 exports.getMe = getMe;
+exports.googleRedirect = googleRedirect;
+exports.googleCallback = googleCallback;
 exports.googleAuth = googleAuth;
 exports.logout = logout;
 const mongoose_1 = __importDefault(require("mongoose"));
@@ -13,6 +15,8 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const User_1 = require("../models/User");
 const jwt_1 = require("../utils/jwt");
 const auth_validator_1 = require("../validators/auth.validator");
+const database_1 = require("../config/database");
+const env_1 = require("../config/env");
 const dataStore_1 = require("../store/dataStore");
 function setAuthCookies(res, token) {
     const isProd = process.env.NODE_ENV === "production";
@@ -21,6 +25,7 @@ function setAuthCookies(res, token) {
         secure: isProd,
         sameSite: (isProd ? "none" : "lax"),
         maxAge: 7 * 24 * 60 * 60 * 1000,
+        path: "/",
     };
     res.cookie("token", token, cookieOptions);
     res.cookie("studiospace_token", token, cookieOptions);
@@ -31,6 +36,7 @@ function clearAuthCookies(res) {
         httpOnly: true,
         secure: isProd,
         sameSite: (isProd ? "none" : "lax"),
+        path: "/",
     };
     res.clearCookie("token", cookieOptions);
     res.clearCookie("studiospace_token", cookieOptions);
@@ -45,21 +51,27 @@ async function register(req, res) {
             });
             return;
         }
-        const { name, email, password, role, phone } = parsed.data;
-        // Dual-Engine: If MongoDB connected, use Mongoose
+        const { name, email, password, role, phone, avatar } = parsed.data;
+        const normalizedEmail = email.toLowerCase().trim();
+        // Ensure database connection
+        if (mongoose_1.default.connection.readyState !== 1) {
+            await (0, database_1.connectDB)();
+        }
+        // Primary Production Engine: MongoDB Atlas
         if (mongoose_1.default.connection.readyState === 1) {
-            const existingUser = await User_1.User.findOne({ email });
+            const existingUser = await User_1.User.findOne({ email: normalizedEmail });
             if (existingUser) {
                 res.status(409).json({ error: "An account with this email already exists." });
                 return;
             }
             const user = await User_1.User.create({
-                name,
-                email,
-                password,
+                name: name.trim(),
+                email: normalizedEmail,
+                password, // Hashed by User model pre-save hook
                 role: role || "guest",
                 phone: phone || "",
-                avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
+                avatar: avatar ||
+                    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
             });
             const token = (0, jwt_1.generateToken)({
                 userId: user._id.toString(),
@@ -81,16 +93,21 @@ async function register(req, res) {
             });
             return;
         }
-        // Local DataStore Engine
-        const existing = dataStore_1.store.findUserByEmail(email);
+        // In production, never silently fall back to local storage
+        if (process.env.NODE_ENV === "production") {
+            res.status(503).json({ error: "Database service unavailable. Please retry in a few moments." });
+            return;
+        }
+        // Development fallback only
+        const existing = dataStore_1.store.findUserByEmail(normalizedEmail);
         if (existing) {
             res.status(409).json({ error: "An account with this email already exists." });
             return;
         }
         const hashedPassword = bcryptjs_1.default.hashSync(password, 10);
         const user = dataStore_1.store.createUser({
-            name,
-            email,
+            name: name.trim(),
+            email: normalizedEmail,
             password: hashedPassword,
             role: role || "guest",
             phone: phone || "",
@@ -130,11 +147,19 @@ async function login(req, res) {
             return;
         }
         const { email, password } = parsed.data;
-        // Dual-Engine: If MongoDB connected, use Mongoose
+        const normalizedEmail = email.toLowerCase().trim();
+        if (mongoose_1.default.connection.readyState !== 1) {
+            await (0, database_1.connectDB)();
+        }
+        // Primary Production Engine: MongoDB Atlas
         if (mongoose_1.default.connection.readyState === 1) {
-            const user = await User_1.User.findOne({ email }).select("+password");
+            const user = await User_1.User.findOne({ email: normalizedEmail }).select("+password");
             if (!user) {
                 res.status(401).json({ error: "Invalid email or password." });
+                return;
+            }
+            if (!user.password) {
+                res.status(401).json({ error: "This account was registered with Google. Please use Google Sign In." });
                 return;
             }
             const isMatch = await user.comparePassword(password);
@@ -162,8 +187,13 @@ async function login(req, res) {
             });
             return;
         }
-        // Local DataStore Engine
-        const user = dataStore_1.store.findUserByEmail(email);
+        // In production, never silently fall back to local storage
+        if (process.env.NODE_ENV === "production") {
+            res.status(503).json({ error: "Database service unavailable. Please retry in a few moments." });
+            return;
+        }
+        // Development fallback only
+        const user = dataStore_1.store.findUserByEmail(normalizedEmail);
         if (!user || !user.password) {
             res.status(401).json({ error: "Invalid email or password." });
             return;
@@ -203,6 +233,9 @@ async function getMe(req, res) {
             res.status(401).json({ error: "Not authenticated" });
             return;
         }
+        if (mongoose_1.default.connection.readyState !== 1) {
+            await (0, database_1.connectDB)();
+        }
         if (mongoose_1.default.connection.readyState === 1) {
             const user = await User_1.User.findById(req.user.userId);
             if (!user) {
@@ -223,7 +256,7 @@ async function getMe(req, res) {
             });
             return;
         }
-        // Local DataStore Engine
+        // Local DataStore Engine (dev fallback only)
         const user = dataStore_1.store.findUserById(req.user.userId);
         if (!user) {
             res.status(404).json({ error: "User not found" });
@@ -247,22 +280,176 @@ async function getMe(req, res) {
         res.status(500).json({ error: "Failed to fetch user session" });
     }
 }
-async function googleAuth(req, res) {
+/**
+ * Initiates Real Google OAuth 2.0 Authorization Code flow
+ * Redirects user to Google Accounts consent screen
+ */
+function googleRedirect(_req, res) {
+    const rootUrl = "https://accounts.google.com/o/oauth2/v2/auth";
+    const options = {
+        redirect_uri: env_1.ENV.GOOGLE_CALLBACK_URL,
+        client_id: env_1.ENV.GOOGLE_CLIENT_ID,
+        access_type: "offline",
+        response_type: "code",
+        prompt: "consent",
+        scope: [
+            "https://www.googleapis.com/auth/userinfo.profile",
+            "https://www.googleapis.com/auth/userinfo.email",
+        ].join(" "),
+    };
+    const qs = new URLSearchParams(options);
+    res.redirect(`${rootUrl}?${qs.toString()}`);
+}
+/**
+ * Handles Real Google OAuth 2.0 callback
+ * Exchanges authorization code for tokens, verifies profile, persists user in MongoDB Atlas
+ */
+async function googleCallback(req, res) {
+    const code = req.query.code;
+    if (!code) {
+        res.redirect(`${env_1.ENV.CLIENT_URL}/login?error=Google+authorization+code+missing`);
+        return;
+    }
     try {
-        const { email, name, avatar, googleId } = req.body;
-        if (!email || !name) {
-            res.status(400).json({ error: "Email and name are required for Google Auth" });
+        const clientSecret = process.env.GOOGLE_CLIENT_SECRET || env_1.ENV.GOOGLE_CLIENT_SECRET;
+        if (!clientSecret) {
+            console.error("[Google OAuth] Missing GOOGLE_CLIENT_SECRET in environment");
+            res.redirect(`${env_1.ENV.CLIENT_URL}/login?error=Google+OAuth+credentials+not+configured`);
             return;
         }
+        // Exchange code for tokens with Google
+        const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+                code,
+                client_id: env_1.ENV.GOOGLE_CLIENT_ID,
+                client_secret: clientSecret,
+                redirect_uri: env_1.ENV.GOOGLE_CALLBACK_URL,
+                grant_type: "authorization_code",
+            }),
+        });
+        const tokens = (await tokenRes.json());
+        if (!tokens.access_token) {
+            console.error("[Google OAuth] Token exchange failed:", tokens.error || "Unknown error");
+            res.redirect(`${env_1.ENV.CLIENT_URL}/login?error=Google+authentication+failed`);
+            return;
+        }
+        // Fetch user profile from Google UserInfo endpoint
+        const userRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+            headers: { Authorization: `Bearer ${tokens.access_token}` },
+        });
+        const googleUser = (await userRes.json());
+        if (!googleUser.email) {
+            res.redirect(`${env_1.ENV.CLIENT_URL}/login?error=Unable+to+retrieve+verified+Google+email`);
+            return;
+        }
+        if (mongoose_1.default.connection.readyState !== 1) {
+            await (0, database_1.connectDB)();
+        }
+        const normalizedEmail = googleUser.email.toLowerCase().trim();
+        let user = null;
         if (mongoose_1.default.connection.readyState === 1) {
-            let user = await User_1.User.findOne({ email });
-            if (!user) {
+            user = await User_1.User.findOne({
+                $or: [{ googleId: googleUser.sub }, { email: normalizedEmail }],
+            });
+            if (user) {
+                if (!user.googleId)
+                    user.googleId = googleUser.sub;
+                if (!user.avatar && googleUser.picture)
+                    user.avatar = googleUser.picture;
+                await user.save();
+            }
+            else {
+                // Automatically create first-time Google user in MongoDB Atlas
                 user = await User_1.User.create({
-                    name,
-                    email,
-                    avatar: avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
+                    name: googleUser.name || "Google User",
+                    email: normalizedEmail,
+                    googleId: googleUser.sub,
+                    avatar: googleUser.picture || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
                     role: "guest",
-                    googleId: googleId || "google_oauth_" + Date.now(),
+                });
+            }
+        }
+        else {
+            // Local fallback
+            user = dataStore_1.store.findUserByEmail(normalizedEmail);
+            if (!user) {
+                user = dataStore_1.store.createUser({
+                    name: googleUser.name || "Google User",
+                    email: normalizedEmail,
+                    avatar: googleUser.picture || "",
+                    role: "guest",
+                });
+            }
+        }
+        const token = (0, jwt_1.generateToken)({
+            userId: user._id ? user._id.toString() : user.id,
+            email: user.email,
+            role: user.role,
+        });
+        setAuthCookies(res, token);
+        // Redirect to frontend dashboard with token
+        res.redirect(`${env_1.ENV.CLIENT_URL}/dashboard?auth_token=${token}`);
+    }
+    catch (error) {
+        console.error("[Google OAuth] Callback error:", error.message);
+        res.redirect(`${env_1.ENV.CLIENT_URL}/login?error=Google+login+processing+failed`);
+    }
+}
+/**
+ * Handles JSON-based Google Authentication (for direct verified token / popup flow)
+ */
+async function googleAuth(req, res) {
+    try {
+        const { email, name, avatar, googleId, credential } = req.body;
+        let userEmail = email;
+        let userName = name;
+        let userAvatar = avatar;
+        let userGoogleId = googleId;
+        // Verify Google ID token if provided
+        if (credential) {
+            try {
+                const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+                if (verifyRes.ok) {
+                    const payload = (await verifyRes.json());
+                    userEmail = payload.email;
+                    userName = payload.name;
+                    userAvatar = payload.picture;
+                    userGoogleId = payload.sub;
+                }
+            }
+            catch {
+                // Fallback to body
+            }
+        }
+        if (!userEmail) {
+            res.status(400).json({ error: "Email is required for Google Auth" });
+            return;
+        }
+        const normalizedEmail = userEmail.toLowerCase().trim();
+        if (mongoose_1.default.connection.readyState !== 1) {
+            await (0, database_1.connectDB)();
+        }
+        if (mongoose_1.default.connection.readyState === 1) {
+            let user = await User_1.User.findOne({
+                $or: [{ googleId: userGoogleId }, { email: normalizedEmail }],
+            });
+            if (user) {
+                if (!user.googleId && userGoogleId)
+                    user.googleId = userGoogleId;
+                if (!user.avatar && userAvatar)
+                    user.avatar = userAvatar;
+                await user.save();
+            }
+            else {
+                user = await User_1.User.create({
+                    name: userName || "Google User",
+                    email: normalizedEmail,
+                    avatar: userAvatar ||
+                        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
+                    role: "guest",
+                    googleId: userGoogleId || "google_oauth_" + Date.now(),
                 });
             }
             const token = (0, jwt_1.generateToken)({
@@ -284,13 +471,14 @@ async function googleAuth(req, res) {
             });
             return;
         }
-        // Local DataStore Engine
-        let user = dataStore_1.store.findUserByEmail(email);
+        // Local DataStore Engine (dev fallback only)
+        let user = dataStore_1.store.findUserByEmail(normalizedEmail);
         if (!user) {
             user = dataStore_1.store.createUser({
-                name,
-                email,
-                avatar: avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
+                name: userName || "Google User",
+                email: normalizedEmail,
+                avatar: userAvatar ||
+                    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
                 role: "guest",
             });
         }

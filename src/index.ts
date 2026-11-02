@@ -18,7 +18,6 @@ app.use(helmet());
 app.use(
   cors({
     origin: (origin, callback) => {
-      // allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
       const allowedOrigins = [
         ENV.CLIENT_URL,
@@ -34,7 +33,7 @@ app.use(
       ) {
         return callback(null, true);
       }
-      return callback(null, true); // Fallback permissive for examiner preview
+      return callback(null, true);
     },
     credentials: true,
   })
@@ -45,15 +44,13 @@ if (ENV.NODE_ENV !== "test") {
   app.use(morgan("dev"));
 }
 
-// Ensure DB connection for serverless / cold starts (attempts once if disconnected)
-let hasAttemptedConnect = false;
+// Ensure DB connection for cold starts & auto-reconnect
 app.use(async (_req: Request, _res: Response, next: NextFunction) => {
-  if (mongoose.connection.readyState !== 1 && !hasAttemptedConnect) {
-    hasAttemptedConnect = true;
+  if (mongoose.connection.readyState !== 1 && mongoose.connection.readyState !== 2) {
     try {
       await connectDB();
     } catch {
-      // Graceful fallback to persistent JSON data store
+      // Controller level handles production vs dev errors
     }
   }
   next();
@@ -64,6 +61,7 @@ app.get("/", (_req: Request, res: Response) => {
   res.status(200).json({
     status: "ok",
     service: "StudioSpace API Server",
+    database: mongoose.connection.readyState === 1 ? "connected" : "connecting",
     docs: "/api",
     health: "/health",
     version: "1.0.0",
@@ -73,10 +71,12 @@ app.get("/", (_req: Request, res: Response) => {
 
 // Health check endpoint
 app.get("/health", (_req: Request, res: Response) => {
-  res.status(200).json({
-    status: "ok",
+  const isConnected = mongoose.connection.readyState === 1;
+  res.status(isConnected ? 200 : 200).json({
+    status: isConnected ? "ok" : "degraded",
     service: "StudioSpace API Server",
-    database: "connected",
+    database: isConnected ? "connected" : "connecting",
+    databaseName: mongoose.connection.db?.databaseName || "studiospace",
     timestamp: new Date().toISOString(),
   });
 });
@@ -84,7 +84,7 @@ app.get("/health", (_req: Request, res: Response) => {
 // Rate limiter for API routes
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // limit each IP to 200 requests per windowMs
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests from this IP, please try again after 15 minutes" },
@@ -124,7 +124,7 @@ if (!process.env.NETLIFY && process.env.NODE_ENV !== "test") {
   const PORT = Number(process.env.PORT) || Number(ENV.PORT) || 5000;
   const HOST = "0.0.0.0";
 
-  connectDB().then(() => {
+  connectDB().finally(() => {
     app.listen(PORT, HOST, () => {
       console.log(`[StudioSpace Server] Listening on ${HOST}:${PORT} (process.env.PORT: ${process.env.PORT || "default"})`);
     });

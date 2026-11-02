@@ -12,6 +12,7 @@ exports.registerSchema = zod_1.z.object({
         .regex(/[a-z]/, "Password must contain at least one lowercase letter"),
     role: zod_1.z.enum(["guest", "host"]).default("guest").optional(),
     phone: zod_1.z.string().optional(),
+    avatar: zod_1.z.string().url("Avatar must be a valid URL").or(zod_1.z.literal("")).optional(),
 });
 exports.loginSchema = zod_1.z.object({
     email: zod_1.z.string().email("Invalid email address"),

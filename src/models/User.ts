@@ -93,4 +93,4 @@ UserSchema.methods.comparePassword = async function (candidate: string): Promise
 };
 
 export const User: Model<IUser> =
-  mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
+  mongoose.models.User || mongoose.model<IUser>("User", UserSchema, "users");

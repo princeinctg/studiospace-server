@@ -109,4 +109,4 @@ UserSchema.methods.comparePassword = async function (candidate) {
         return false;
     return bcryptjs_1.default.compare(candidate, this.password);
 };
-exports.User = mongoose_1.default.models.User || mongoose_1.default.model("User", UserSchema);
+exports.User = mongoose_1.default.models.User || mongoose_1.default.model("User", UserSchema, "users");

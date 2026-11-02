@@ -14,32 +14,40 @@ async function connectDB() {
     if (state.isConnected && mongoose_1.default.connection.readyState === 1) {
         return mongoose_1.default;
     }
+    const rawUri = process.env.MONGODB_URI ||
+        process.env.MONGO_URI ||
+        process.env.MONGODB_URL ||
+        env_1.ENV.MONGODB_URI;
     try {
-        const conn = await mongoose_1.default.connect(env_1.ENV.MONGODB_URI, {
-            serverSelectionTimeoutMS: 2000,
+        mongoose_1.default.set("strictQuery", false);
+        const conn = await mongoose_1.default.connect(rawUri, {
+            dbName: "studiospace",
+            serverSelectionTimeoutMS: 10000,
+            connectTimeoutMS: 10000,
             autoIndex: true,
         });
         state.isConnected = true;
-        console.log(`[MongoDB] Connected successfully: ${conn.connection.host}`);
+        console.log(`[MongoDB Atlas] Connected successfully to database: ${conn.connection.db?.databaseName || "studiospace"}`);
         mongoose_1.default.connection.on("error", (err) => {
-            console.error("[MongoDB] Runtime error:", err);
+            console.error("[MongoDB Atlas] Runtime error:", err.message);
         });
         mongoose_1.default.connection.on("disconnected", () => {
-            console.warn("[MongoDB] Disconnected from database");
+            console.warn("[MongoDB Atlas] Disconnected from database");
             state.isConnected = false;
         });
         return conn;
     }
     catch (error) {
-        console.error("[MongoDB] Initial connection error:", error);
-        // Don't crash process in dev/test; allow server to run and retry
+        // Never expose connection credentials in logs
+        console.error("[MongoDB Atlas] Connection failed:", error.name || "Error", error.message ? error.message.replace(/mongodb\+srv:\/\/[^@]+@/, "mongodb+srv://***:***@") : "");
+        state.isConnected = false;
         return null;
     }
 }
 async function disconnectDB() {
-    if (state.isConnected) {
+    if (state.isConnected || mongoose_1.default.connection.readyState !== 0) {
         await mongoose_1.default.disconnect();
         state.isConnected = false;
-        console.log("[MongoDB] Connection closed gracefully");
+        console.log("[MongoDB Atlas] Connection closed gracefully");
     }
 }
