@@ -104,9 +104,9 @@ class DataStore {
     const guestHash = bcrypt.hashSync("GuestPassword123!", 10);
 
     const initialHost: StoredUser = {
-      id: "host-alex-vance",
-      _id: "host-alex-vance",
-      name: "Alex Vance (Host)",
+      id: "host-imdatul-hoque",
+      _id: "host-imdatul-hoque",
+      name: "Imdatul Hoque (Host)",
       email: "host@studiospace.com",
       password: hostHash,
       role: "host",
@@ -118,9 +118,9 @@ class DataStore {
     };
 
     const initialGuest: StoredUser = {
-      id: "guest-sarah-jenkins",
-      _id: "guest-sarah-jenkins",
-      name: "Sarah Jenkins (Examiner / Guest)",
+      id: "guest-imrita-aksa",
+      _id: "guest-imrita-aksa",
+      name: "Imrita Aksa (Examiner / Guest)",
       email: "guest@studiospace.com",
       password: guestHash,
       role: "guest",

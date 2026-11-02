@@ -6,7 +6,7 @@ import { Studio } from "../models/Studio";
 
 const demoUsers = [
   {
-    name: "Alex Vance (Host)",
+    name: "Imdatul Hoque (Host)",
     email: "host@studiospace.com",
     password: "HostPassword123!",
     role: "host",
@@ -15,7 +15,7 @@ const demoUsers = [
     bio: "Commercial director and studio curator based in Brooklyn, NY. Passionate about providing film and photography creators with top-tier gear.",
   },
   {
-    name: "Sarah Jenkins (Examiner / Guest)",
+    name: "Imrita Aksa (Examiner / Guest)",
     email: "guest@studiospace.com",
     password: "GuestPassword123!",
     role: "guest",
