@@ -79,7 +79,7 @@ interface LocalDatabase {
 const DATA_DIR =
   process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME
     ? path.join(os.tmpdir(), "studiospace-data")
-    : path.join(process.cwd(), ".data");
+    : path.resolve(__dirname, "../../.data");
 const STORE_PATH = path.join(DATA_DIR, "studiospace-store.json");
 
 class DataStore {
@@ -413,6 +413,8 @@ class DataStore {
             } else {
               this.db.users[idx] = {
                 ...this.db.users[idx],
+                id: u.id,
+                _id: u._id,
                 name: u.name,
                 avatar: u.avatar,
                 role: u.role,

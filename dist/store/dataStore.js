@@ -10,7 +10,7 @@ const os_1 = __importDefault(require("os"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const DATA_DIR = process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME
     ? path_1.default.join(os_1.default.tmpdir(), "studiospace-data")
-    : path_1.default.join(process.cwd(), ".data");
+    : path_1.default.resolve(__dirname, "../../.data");
 const STORE_PATH = path_1.default.join(DATA_DIR, "studiospace-store.json");
 class DataStore {
     db = { users: [], studios: [], bookings: [] };
@@ -337,6 +337,8 @@ class DataStore {
                         else {
                             this.db.users[idx] = {
                                 ...this.db.users[idx],
+                                id: u.id,
+                                _id: u._id,
                                 name: u.name,
                                 avatar: u.avatar,
                                 role: u.role,
