@@ -3,6 +3,8 @@ import { sanitizeMongoUri } from "../utils/mongoUri";
 
 dotenv.config();
 
+const isProduction = process.env.NODE_ENV === "production";
+
 export const ENV = {
   PORT: process.env.PORT || 5000,
   NODE_ENV: process.env.NODE_ENV || "development",
@@ -14,7 +16,7 @@ export const ENV = {
     process.env.DATABASE_URL ||
     process.env.DB_URI ||
     process.env.MONGODB_CONNECTION_STRING ||
-    "mongodb://localhost:27017/studiospace"
+    (isProduction ? "" : "mongodb://localhost:27017/studiospace")
   ),
   JWT_SECRET: process.env.JWT_SECRET || "studiospace_default_jwt_secret_change_in_production",
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",

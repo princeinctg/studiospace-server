@@ -55,6 +55,15 @@ export async function connectDB(): Promise<typeof mongoose | null> {
   const sanitizedUri = getResolvedMongoUri();
   state.targetUri = sanitizedUri;
 
+  if (!sanitizedUri) {
+    if (ENV.NODE_ENV === "production") {
+      state.isConnected = false;
+      state.lastError = "MONGODB_URI is not configured in production";
+      console.error("[MongoDB Atlas] CRITICAL: No MONGODB_URI provided in production. Localhost fallback disabled.");
+      return null;
+    }
+  }
+
   try {
     mongoose.set("strictQuery", false);
 

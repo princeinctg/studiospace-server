@@ -10,11 +10,12 @@
  * - Auto-URL-encoding of reserved/special characters in passwords (#, @, %, etc.)
  * - Ensuring database name is explicitly "studiospace"
  * - Safe credential masking for production logging
- * - Guaranteeing URI begins with mongodb:// or mongodb+srv://
+ * - Never using an invalid local fallback in production
  */
 
 export function sanitizeMongoUri(rawUri: string | undefined | null): string {
-  const DEFAULT_URI = "mongodb://127.0.0.1:27017/studiospace";
+  const isProd = process.env.NODE_ENV === "production";
+  const DEFAULT_URI = isProd ? "" : "mongodb://127.0.0.1:27017/studiospace";
 
   if (!rawUri || typeof rawUri !== "string") {
     return DEFAULT_URI;

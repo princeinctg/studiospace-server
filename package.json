@@ -10,7 +10,8 @@
     "prestart": "npm run build",
     "start": "node dist/index.js",
     "seed": "ts-node-dev --transpile-only src/seed/seed.ts",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "check-casing": "node scripts/check-casing.js"
   },
   "keywords": [
     "studiospace",

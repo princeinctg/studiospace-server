@@ -48,6 +48,14 @@ async function connectDB() {
     }
     const sanitizedUri = getResolvedMongoUri();
     state.targetUri = sanitizedUri;
+    if (!sanitizedUri) {
+        if (env_1.ENV.NODE_ENV === "production") {
+            state.isConnected = false;
+            state.lastError = "MONGODB_URI is not configured in production";
+            console.error("[MongoDB Atlas] CRITICAL: No MONGODB_URI provided in production. Localhost fallback disabled.");
+            return null;
+        }
+    }
     try {
         mongoose_1.default.set("strictQuery", false);
         console.log(`[MongoDB Atlas] Attempting connection to: ${(0, mongoUri_1.maskMongoUri)(sanitizedUri)}`);
