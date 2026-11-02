@@ -1,7 +1,15 @@
 /**
  * MongoDB URI Sanitizer & Masker
- * Prevents "MongoParseError: Invalid scheme, expected connection string to start with mongodb:// or mongodb+srv://"
- * caused by quotes, leading/trailing whitespace, env var name prefixes, or missing scheme in environment variables.
+ * Bulletproof connection string sanitizer for MongoDB Atlas & local development.
+ * Automatically handles:
+ * - Surrounding quotes: single, double, backticks
+ * - Leading/trailing whitespace and newlines
+ * - Env var assignment prefixes (e.g. MONGODB_URI=mongodb+srv://...)
+ * - Loose scheme typos (e.g. mongodb+srv: //)
+ * - Inferred schemes for .mongodb.net clusters
+ * - Auto-URL-encoding of reserved/special characters in passwords (#, @, %, etc.)
+ * - Ensuring database name is explicitly "studiospace"
+ * - Safe credential masking for production logging
  */
 
 export function sanitizeMongoUri(rawUri: string | undefined | null): string {
@@ -12,8 +20,8 @@ export function sanitizeMongoUri(rawUri: string | undefined | null): string {
   // 1. Trim whitespace, tabs, and newlines
   let uri = rawUri.trim();
 
-  // 2. Check if it contains a full mongodb:// or mongodb+srv:// protocol anywhere inside
-  // (e.g. if the user pasted "MONGODB_URI=mongodb+srv://..." or "const uri = 'mongodb+srv://...'")
+  // 2. Extract full mongodb:// or mongodb+srv:// protocol if embedded inside text or assignments
+  // (e.g. "MONGODB_URI=mongodb+srv://...", "const uri = 'mongodb+srv://...'")
   const schemeMatch = uri.match(/(mongodb(?:\+srv)?:\/\/[^\s"'`]+)/i);
   if (schemeMatch) {
     uri = schemeMatch[1];
@@ -38,13 +46,54 @@ export function sanitizeMongoUri(rawUri: string | undefined | null): string {
   // 6. Strip any escaped quotes remaining
   uri = uri.replace(/\\"/g, "").replace(/\\'/g, "").trim();
 
-  // 7. Handle MongoDB Cloud Web Console URL or fallback
+  // 7. Handle MongoDB Cloud Web Console URL mistakenly pasted
   if (!uri.startsWith("mongodb://") && !uri.startsWith("mongodb+srv://")) {
     if (uri.toLowerCase().includes("cloud.mongodb.com")) {
       console.warn("[MongoDB Atlas Warning] Detected MongoDB Cloud Web Console URL instead of database connection string. Expected: mongodb+srv://...");
       return "mongodb://127.0.0.1:27017/studiospace";
     }
     uri = "mongodb://" + uri.replace(/^[^a-zA-Z0-9]+/, "");
+  }
+
+  // 8. Safely URL-encode credentials if username/password contains unescaped special characters
+  const protoMatch = uri.match(/^(mongodb(?:\+srv)?:\/\/)(.*)$/);
+  if (protoMatch) {
+    const proto = protoMatch[1];
+    const body = protoMatch[2];
+    const lastAt = body.lastIndexOf("@");
+    if (lastAt !== -1) {
+      const userinfo = body.substring(0, lastAt);
+      const hostAndRest = body.substring(lastAt + 1);
+      const colonIdx = userinfo.indexOf(":");
+      if (colonIdx !== -1) {
+        const rawUser = userinfo.substring(0, colonIdx);
+        const rawPass = userinfo.substring(colonIdx + 1);
+
+        if (rawPass.includes("<password>") || rawPass.includes("<db_password>")) {
+          console.warn("[MongoDB Atlas Warning] The placeholder '<password>' in MONGODB_URI was not replaced with your real database user password!");
+        }
+
+        try {
+          const safeUser = encodeURIComponent(decodeURIComponent(rawUser));
+          const safePass = encodeURIComponent(decodeURIComponent(rawPass));
+          uri = `${proto}${safeUser}:${safePass}@${hostAndRest}`;
+        } catch {
+          // If decoding throws URIError, encode the raw values directly
+          const safeUser = encodeURIComponent(rawUser);
+          const safePass = encodeURIComponent(rawPass);
+          uri = `${proto}${safeUser}:${safePass}@${hostAndRest}`;
+        }
+      }
+    }
+  }
+
+  // 9. Ensure Atlas cluster targets the "studiospace" database
+  if (uri.includes(".mongodb.net")) {
+    if (/\.mongodb\.net\/(?:test)?(?:\?|$)/i.test(uri)) {
+      uri = uri.replace(/\.mongodb\.net\/(?:test)?(\?.*)?$/i, (_m, query) => ".mongodb.net/studiospace" + (query || ""));
+    } else if (/\.mongodb\.net$/i.test(uri)) {
+      uri = uri + "/studiospace";
+    }
   }
 
   return uri.trim();

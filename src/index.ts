@@ -5,7 +5,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 import { ENV } from "./config/env";
-import { connectDB, disconnectDB } from "./config/database";
+import { connectDB, disconnectDB, getDatabaseStatus } from "./config/database";
 import authRoutes from "./routes/auth.routes";
 import studioRoutes from "./routes/studio.routes";
 import bookingRoutes from "./routes/booking.routes";
@@ -58,10 +58,12 @@ app.use(async (_req: Request, _res: Response, next: NextFunction) => {
 
 // Root server status
 app.get("/", (_req: Request, res: Response) => {
+  const dbStatus = getDatabaseStatus();
   res.status(200).json({
     status: "ok",
     service: "StudioSpace API Server",
-    database: mongoose.connection.readyState === 1 ? "connected" : "connecting",
+    database: dbStatus.status,
+    databaseTarget: dbStatus.target,
     docs: "/api",
     health: "/health",
     version: "1.0.0",
@@ -71,12 +73,12 @@ app.get("/", (_req: Request, res: Response) => {
 
 // Health check endpoint
 app.get("/health", (_req: Request, res: Response) => {
-  const isConnected = mongoose.connection.readyState === 1;
-  res.status(isConnected ? 200 : 200).json({
-    status: isConnected ? "ok" : "degraded",
+  const dbStatus = getDatabaseStatus();
+  res.status(200).json({
+    status: dbStatus.isConnected ? "ok" : "degraded",
     service: "StudioSpace API Server",
-    database: isConnected ? "connected" : "connecting",
-    databaseName: mongoose.connection.db?.databaseName || "studiospace",
+    database: dbStatus.status,
+    databaseDetails: dbStatus,
     timestamp: new Date().toISOString(),
   });
 });

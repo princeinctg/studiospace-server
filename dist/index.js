@@ -57,10 +57,12 @@ app.use(async (_req, _res, next) => {
 });
 // Root server status
 app.get("/", (_req, res) => {
+    const dbStatus = (0, database_1.getDatabaseStatus)();
     res.status(200).json({
         status: "ok",
         service: "StudioSpace API Server",
-        database: mongoose_1.default.connection.readyState === 1 ? "connected" : "connecting",
+        database: dbStatus.status,
+        databaseTarget: dbStatus.target,
         docs: "/api",
         health: "/health",
         version: "1.0.0",
@@ -69,12 +71,12 @@ app.get("/", (_req, res) => {
 });
 // Health check endpoint
 app.get("/health", (_req, res) => {
-    const isConnected = mongoose_1.default.connection.readyState === 1;
-    res.status(isConnected ? 200 : 200).json({
-        status: isConnected ? "ok" : "degraded",
+    const dbStatus = (0, database_1.getDatabaseStatus)();
+    res.status(200).json({
+        status: dbStatus.isConnected ? "ok" : "degraded",
         service: "StudioSpace API Server",
-        database: isConnected ? "connected" : "connecting",
-        databaseName: mongoose_1.default.connection.db?.databaseName || "studiospace",
+        database: dbStatus.status,
+        databaseDetails: dbStatus,
         timestamp: new Date().toISOString(),
     });
 });

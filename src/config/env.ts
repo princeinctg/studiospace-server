@@ -10,6 +10,10 @@ export const ENV = {
     process.env.MONGODB_URI ||
     process.env.MONGO_URI ||
     process.env.MONGODB_URL ||
+    process.env.MONGO_URL ||
+    process.env.DATABASE_URL ||
+    process.env.DB_URI ||
+    process.env.MONGODB_CONNECTION_STRING ||
     "mongodb://localhost:27017/studiospace"
   ),
   JWT_SECRET: process.env.JWT_SECRET || "studiospace_default_jwt_secret_change_in_production",
