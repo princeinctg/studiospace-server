@@ -11,16 +11,27 @@
  * - Auto-URL-encoding of reserved/special characters in passwords (#, @, %, etc.)
  * - Ensuring database name is explicitly "studiospace"
  * - Safe credential masking for production logging
+ * - Guaranteeing URI begins with mongodb:// or mongodb+srv://
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sanitizeMongoUri = sanitizeMongoUri;
 exports.maskMongoUri = maskMongoUri;
 function sanitizeMongoUri(rawUri) {
+    const DEFAULT_URI = "mongodb://127.0.0.1:27017/studiospace";
     if (!rawUri || typeof rawUri !== "string") {
-        return "mongodb://127.0.0.1:27017/studiospace";
+        return DEFAULT_URI;
     }
     // 1. Trim whitespace, tabs, and newlines
     let uri = rawUri.trim();
+    // Check for empty, placeholder, or invalid inputs
+    const stripped = uri.replace(/^["'`]+|["'`]+$/g, "").trim();
+    if (!stripped ||
+        stripped === "undefined" ||
+        stripped === "null" ||
+        stripped === "mongodb://" ||
+        stripped === "mongodb+srv://") {
+        return DEFAULT_URI;
+    }
     // 2. Extract full mongodb:// or mongodb+srv:// protocol if embedded inside text or assignments
     // (e.g. "MONGODB_URI=mongodb+srv://...", "const uri = 'mongodb+srv://...'")
     const schemeMatch = uri.match(/(mongodb(?:\+srv)?:\/\/[^\s"'`]+)/i);
@@ -50,7 +61,7 @@ function sanitizeMongoUri(rawUri) {
     if (!uri.startsWith("mongodb://") && !uri.startsWith("mongodb+srv://")) {
         if (uri.toLowerCase().includes("cloud.mongodb.com")) {
             console.warn("[MongoDB Atlas Warning] Detected MongoDB Cloud Web Console URL instead of database connection string. Expected: mongodb+srv://...");
-            return "mongodb://127.0.0.1:27017/studiospace";
+            return DEFAULT_URI;
         }
         uri = "mongodb://" + uri.replace(/^[^a-zA-Z0-9]+/, "");
     }
@@ -76,7 +87,6 @@ function sanitizeMongoUri(rawUri) {
                     uri = `${proto}${safeUser}:${safePass}@${hostAndRest}`;
                 }
                 catch {
-                    // If decoding throws URIError, encode the raw values directly
                     const safeUser = encodeURIComponent(rawUser);
                     const safePass = encodeURIComponent(rawPass);
                     uri = `${proto}${safeUser}:${safePass}@${hostAndRest}`;
@@ -92,6 +102,14 @@ function sanitizeMongoUri(rawUri) {
         else if (/\.mongodb\.net$/i.test(uri)) {
             uri = uri + "/studiospace";
         }
+    }
+    // 10. Strict scheme and host guarantee
+    if (!uri.startsWith("mongodb://") && !uri.startsWith("mongodb+srv://")) {
+        uri = "mongodb://" + uri.replace(/^[^a-zA-Z0-9]+/, "");
+    }
+    const withoutProto = uri.replace(/^mongodb(?:\+srv)?:\/\//i, "");
+    if (!withoutProto || withoutProto.startsWith("/") || withoutProto.startsWith("?")) {
+        return DEFAULT_URI;
     }
     return uri.trim();
 }
