@@ -401,6 +401,26 @@ class DataStore {
       try {
         const raw = fs.readFileSync(STORE_PATH, "utf-8");
         this.db = JSON.parse(raw);
+        if (!this.db.users || this.db.users.length === 0) {
+          this.db.users = [initialHost, initialGuest];
+        } else {
+          for (const u of [initialHost, initialGuest]) {
+            const idx = this.db.users.findIndex(
+              (item) => item.email.toLowerCase() === u.email.toLowerCase()
+            );
+            if (idx === -1) {
+              this.db.users.push(u);
+            } else {
+              this.db.users[idx] = {
+                ...this.db.users[idx],
+                name: u.name,
+                avatar: u.avatar,
+                role: u.role,
+                password: u.password,
+              };
+            }
+          }
+        }
         if (!this.db.studios || this.db.studios.length === 0) {
           this.db.studios = initialStudios;
         } else {
