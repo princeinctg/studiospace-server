@@ -16,7 +16,7 @@ export async function connectDB(): Promise<typeof mongoose | null> {
 
   try {
     const conn = await mongoose.connect(ENV.MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 2000,
       autoIndex: true,
     });
 

@@ -14,7 +14,10 @@ exports.studioTitleValidation = zod_1.z
     .refine((val) => {
     const words = val.trim().split(/\s+/).filter(Boolean);
     const hasVowelRegex = /[aeiouyAEIOUY]/;
-    return words.every((w) => hasVowelRegex.test(w) || /^[0-9]+$/.test(w));
+    return words.every((w) => {
+        const lettersOnly = w.replace(/[^a-zA-Z]/g, "");
+        return !lettersOnly || hasVowelRegex.test(lettersOnly) || /^[0-9]+$/.test(w);
+    });
 }, "Studio title cannot consist of meaningless keyboard mash or random consonant sequences")
     .refine((val) => !/(.)\1{3,}/.test(val), "Studio title cannot contain repeated character sequences");
 exports.hourlyRateValidation = zod_1.z

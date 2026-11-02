@@ -15,5 +15,6 @@ router.post("/", createBooking);
 router.get("/my-bookings", getMyBookings);
 router.get("/host-bookings", getHostBookings);
 router.patch("/:id/status", updateBookingStatus);
+router.patch("/:id/cancel", updateBookingStatus);
 
 export default router;

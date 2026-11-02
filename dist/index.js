@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
+const mongoose_1 = __importDefault(require("mongoose"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const morgan_1 = __importDefault(require("morgan"));
@@ -43,13 +44,17 @@ app.use(express_1.default.urlencoded({ extended: true }));
 if (env_1.ENV.NODE_ENV !== "test") {
     app.use((0, morgan_1.default)("dev"));
 }
-// Ensure DB connection for serverless / cold starts
+// Ensure DB connection for serverless / cold starts (attempts once if disconnected)
+let hasAttemptedConnect = false;
 app.use(async (_req, _res, next) => {
-    try {
-        await (0, database_1.connectDB)();
-    }
-    catch (err) {
-        console.error("[Database Connection Error in Middleware]:", err);
+    if (mongoose_1.default.connection.readyState !== 1 && !hasAttemptedConnect) {
+        hasAttemptedConnect = true;
+        try {
+            await (0, database_1.connectDB)();
+        }
+        catch {
+            // Graceful fallback to persistent JSON data store
+        }
     }
     next();
 });

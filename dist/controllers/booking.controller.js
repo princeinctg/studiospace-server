@@ -90,14 +90,14 @@ async function createBooking(req, res) {
                 totalPrice,
                 guestCount,
                 notes: notes || "",
-                status: "confirmed",
-                paymentStatus: "paid",
+                status: "pending",
+                paymentStatus: "unpaid",
             });
             const populatedBooking = await Booking_1.Booking.findById(booking._id)
                 .populate("studio", "title images location pricePerHour")
                 .populate("guest", "name email");
             res.status(201).json({
-                message: "Studio booking confirmed successfully!",
+                message: "Studio booking request submitted successfully!",
                 booking: populatedBooking,
             });
             return;
@@ -143,11 +143,11 @@ async function createBooking(req, res) {
             totalPrice,
             guestCount,
             notes: notes || "",
-            status: "confirmed",
-            paymentStatus: "paid",
+            status: "pending",
+            paymentStatus: "unpaid",
         });
         res.status(201).json({
-            message: "Studio booking confirmed successfully!",
+            message: "Studio booking request submitted successfully!",
             booking,
         });
     }
@@ -208,6 +208,9 @@ async function updateBookingStatus(req, res) {
             return;
         }
         const id = String(req.params.id);
+        if (!req.body.status) {
+            req.body.status = "cancelled";
+        }
         const parsed = booking_validator_1.updateBookingStatusSchema.safeParse(req.body);
         if (!parsed.success) {
             res.status(400).json({

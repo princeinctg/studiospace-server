@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from "express";
+import mongoose from "mongoose";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
@@ -44,12 +45,16 @@ if (ENV.NODE_ENV !== "test") {
   app.use(morgan("dev"));
 }
 
-// Ensure DB connection for serverless / cold starts
+// Ensure DB connection for serverless / cold starts (attempts once if disconnected)
+let hasAttemptedConnect = false;
 app.use(async (_req: Request, _res: Response, next: NextFunction) => {
-  try {
-    await connectDB();
-  } catch (err) {
-    console.error("[Database Connection Error in Middleware]:", err);
+  if (mongoose.connection.readyState !== 1 && !hasAttemptedConnect) {
+    hasAttemptedConnect = true;
+    try {
+      await connectDB();
+    } catch {
+      // Graceful fallback to persistent JSON data store
+    }
   }
   next();
 });

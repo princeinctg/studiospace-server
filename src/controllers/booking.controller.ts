@@ -105,8 +105,8 @@ export async function createBooking(
         totalPrice,
         guestCount,
         notes: notes || "",
-        status: "confirmed",
-        paymentStatus: "paid",
+        status: "pending",
+        paymentStatus: "unpaid",
       });
 
       const populatedBooking = await Booking.findById(booking._id)
@@ -114,7 +114,7 @@ export async function createBooking(
         .populate("guest", "name email");
 
       res.status(201).json({
-        message: "Studio booking confirmed successfully!",
+        message: "Studio booking request submitted successfully!",
         booking: populatedBooking,
       });
       return;
@@ -167,12 +167,12 @@ export async function createBooking(
       totalPrice,
       guestCount,
       notes: notes || "",
-      status: "confirmed",
-      paymentStatus: "paid",
+      status: "pending",
+      paymentStatus: "unpaid",
     });
 
     res.status(201).json({
-      message: "Studio booking confirmed successfully!",
+      message: "Studio booking request submitted successfully!",
       booking,
     });
   } catch (error: any) {
@@ -250,6 +250,9 @@ export async function updateBookingStatus(
     }
 
     const id = String(req.params.id);
+    if (!req.body.status) {
+      req.body.status = "cancelled";
+    }
     const parsed = updateBookingStatusSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({
