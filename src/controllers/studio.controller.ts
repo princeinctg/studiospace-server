@@ -6,11 +6,12 @@ import { AuthenticatedRequest } from "../middleware/auth";
 import { store } from "../store/dataStore";
 
 function slugify(text: string): string {
-  return text
+  const clean = text
     .toLowerCase()
     .replace(/[^\w ]+/g, "")
-    .replace(/ +/g, "-")
-    .concat("-", Math.random().toString(36).substring(2, 6));
+    .trim()
+    .replace(/ +/g, "-");
+  return (clean || "studio").concat("-", Math.random().toString(36).substring(2, 6));
 }
 
 export async function getAllStudios(req: Request, res: Response): Promise<void> {

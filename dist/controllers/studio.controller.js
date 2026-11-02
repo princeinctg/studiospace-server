@@ -15,11 +15,12 @@ const Studio_1 = require("../models/Studio");
 const studio_validator_1 = require("../validators/studio.validator");
 const dataStore_1 = require("../store/dataStore");
 function slugify(text) {
-    return text
+    const clean = text
         .toLowerCase()
         .replace(/[^\w ]+/g, "")
-        .replace(/ +/g, "-")
-        .concat("-", Math.random().toString(36).substring(2, 6));
+        .trim()
+        .replace(/ +/g, "-");
+    return (clean || "studio").concat("-", Math.random().toString(36).substring(2, 6));
 }
 async function getAllStudios(req, res) {
     try {

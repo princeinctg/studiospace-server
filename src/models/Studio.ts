@@ -63,7 +63,7 @@ const StudioSchema = new Schema<IStudio>(
       type: String,
       required: [true, "Studio title is required"],
       trim: true,
-      maxlength: [120, "Title cannot exceed 120 characters"],
+      maxlength: [500, "Title cannot exceed 500 characters"],
     },
     slug: {
       type: String,
