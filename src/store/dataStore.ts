@@ -262,6 +262,138 @@ class DataStore {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
+      {
+        id: "studio-grand-cinematic",
+        _id: "studio-grand-cinematic",
+        title: "The Grand Cinematic Photography Atelier",
+        slug: "the-grand-cinematic-photography-atelier",
+        description: "Sun-drenched 3,200 sq.ft historic Chelsea atelier with 18-foot ceiling skylights, motorized overhead grid, styling vanity lounges, and Profoto Pro-11 packs.",
+        category: "photography",
+        amenities: ["Skylight Daylight", "Motor Rigging Grid", "VIP Styling Suite", "Digital Capture Station", "Profoto Pro-11", "Client Lounge"],
+        pricePerHour: 450,
+        defaultBookingDuration: 8,
+        location: {
+          address: "540 W 28th St",
+          city: "Manhattan",
+          country: "United States",
+          postalCode: "10001",
+        },
+        images: [
+          "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=1200&q=85",
+          "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=1200&q=85",
+          "https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=1200&q=85",
+        ],
+        host: initialHost,
+        rating: 5.0,
+        reviewCount: 42,
+        capacity: 30,
+        squareFeet: 3200,
+        isAvailable: true,
+        featured: true,
+        tags: ["Photography", "Fashion", "Editorial"],
+        rules: ["Certificate of insurance required for production teams"],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: "studio-obsidian-mastering",
+        _id: "studio-obsidian-mastering",
+        title: "Obsidian Mastering & Recording House",
+        slug: "obsidian-mastering-recording-house",
+        description: "Northward-designed custom-floated mastering and tracking suite equipped with ATC SCM110ASL monitoring and Shadow Hills mastering compressor.",
+        category: "recording",
+        amenities: ["ATC SCM110 Monitoring", "Analog Mastering Rack", "Shadow Hills Compressor", "Custom Acoustic Float", "Private Lounge"],
+        pricePerHour: 380,
+        defaultBookingDuration: 8,
+        location: {
+          address: "2200 NW 2nd Ave",
+          city: "Miami",
+          country: "United States",
+          postalCode: "33127",
+        },
+        images: [
+          "https://images.unsplash.com/photo-1598653222000-6b7b7a552625?auto=format&fit=crop&w=1200&q=85",
+          "https://images.unsplash.com/photo-1520523839898-5071282543e2?auto=format&fit=crop&w=1200&q=85",
+          "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=1200&q=85",
+        ],
+        host: initialHost,
+        rating: 4.9,
+        reviewCount: 38,
+        capacity: 15,
+        squareFeet: 1800,
+        isAvailable: true,
+        featured: true,
+        tags: ["Recording", "Mastering", "Dolby Atmos"],
+        rules: ["Sound pressure levels monitored by lead engineer"],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: "studio-infinity-virtual",
+        _id: "studio-infinity-virtual",
+        title: "Infinity Virtual Production Arena",
+        slug: "infinity-virtual-production-arena",
+        description: "Monumental 6,500 sq.ft stage with 270-degree LED volume wall driven by Unreal Engine 5 nDisplay and drive-in semi loading access.",
+        category: "film",
+        amenities: ["270-deg LED Volume", "Unreal Engine 5 nDisplay", "OptiTrack Mocap", "Drive-in Loading Bay", "Dual Control Suites"],
+        pricePerHour: 850,
+        defaultBookingDuration: 12,
+        location: {
+          address: "3700 S Las Vegas Blvd",
+          city: "Las Vegas",
+          country: "United States",
+          postalCode: "89109",
+        },
+        images: [
+          "https://images.unsplash.com/photo-1601506521937-0121a7fc2a6b?auto=format&fit=crop&w=1200&q=85",
+          "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=1200&q=85",
+          "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=1200&q=85",
+        ],
+        host: initialHost,
+        rating: 5.0,
+        reviewCount: 57,
+        capacity: 60,
+        squareFeet: 6500,
+        isAvailable: true,
+        featured: true,
+        tags: ["Film Production", "Virtual Stage", "Cinema"],
+        rules: ["Stage safety officer mandatory during live volume operations"],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: "studio-executive-podcast",
+        _id: "studio-executive-podcast",
+        title: "The Executive Podcast & Broadcast Lounge",
+        slug: "the-executive-podcast-broadcast-lounge",
+        description: "Panoramic skyline-view broadcast lounge featuring 5x Sony FX6 cinema cameras, sound-damped walnut slat architecture, and 10Gbps fiber uplink.",
+        category: "podcast",
+        amenities: ["5x Sony FX6 Cameras", "10Gbps Fiber Uplink", "Sound-Damped Lounge", "Shure SM7B Microphones"],
+        pricePerHour: 250,
+        defaultBookingDuration: 8,
+        location: {
+          address: "450 Mission St",
+          city: "San Francisco",
+          country: "United States",
+          postalCode: "94105",
+        },
+        images: [
+          "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&w=1200&q=85",
+          "https://images.unsplash.com/photo-1578382171692-304e0ec89c34?auto=format&fit=crop&w=1200&q=85",
+          "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?auto=format&fit=crop&w=1200&q=85",
+        ],
+        host: initialHost,
+        rating: 4.9,
+        reviewCount: 45,
+        capacity: 10,
+        squareFeet: 1100,
+        isAvailable: true,
+        featured: true,
+        tags: ["Podcast", "Broadcast", "Live Streaming"],
+        rules: ["Broadcast switchers operated by authorized crew"],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
     ];
 
     if (fs.existsSync(STORE_PATH)) {
@@ -270,8 +402,17 @@ class DataStore {
         this.db = JSON.parse(raw);
         if (!this.db.studios || this.db.studios.length === 0) {
           this.db.studios = initialStudios;
-          this.save();
+        } else {
+          for (const s of initialStudios) {
+            const idx = this.db.studios.findIndex((item) => item.id === s.id || item.slug === s.slug);
+            if (idx === -1) {
+              this.db.studios.push(s);
+            } else {
+              this.db.studios[idx] = { ...this.db.studios[idx], ...s };
+            }
+          }
         }
+        this.save();
         this.initialized = true;
         return;
       } catch (e) {
