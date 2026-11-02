@@ -7,6 +7,7 @@ exports.connectDB = connectDB;
 exports.disconnectDB = disconnectDB;
 const mongoose_1 = __importDefault(require("mongoose"));
 const env_1 = require("./env");
+const mongoUri_1 = require("../utils/mongoUri");
 const state = {
     isConnected: false,
 };
@@ -18,9 +19,11 @@ async function connectDB() {
         process.env.MONGO_URI ||
         process.env.MONGODB_URL ||
         env_1.ENV.MONGODB_URI;
+    const sanitizedUri = (0, mongoUri_1.sanitizeMongoUri)(rawUri);
     try {
         mongoose_1.default.set("strictQuery", false);
-        const conn = await mongoose_1.default.connect(rawUri, {
+        console.log(`[MongoDB Atlas] Attempting connection to: ${(0, mongoUri_1.maskMongoUri)(sanitizedUri)}`);
+        const conn = await mongoose_1.default.connect(sanitizedUri, {
             dbName: "studiospace",
             serverSelectionTimeoutMS: 10000,
             connectTimeoutMS: 10000,
@@ -39,7 +42,7 @@ async function connectDB() {
     }
     catch (error) {
         // Never expose connection credentials in logs
-        console.error("[MongoDB Atlas] Connection failed:", error.name || "Error", error.message ? error.message.replace(/mongodb\+srv:\/\/[^@]+@/, "mongodb+srv://***:***@") : "");
+        console.error("[MongoDB Atlas] Connection failed:", error.name || "Error", error.message ? (0, mongoUri_1.maskMongoUri)(error.message) : "");
         state.isConnected = false;
         return null;
     }
