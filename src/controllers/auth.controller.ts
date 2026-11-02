@@ -294,6 +294,18 @@ export async function getMe(req: AuthenticatedRequest, res: Response): Promise<v
   }
 }
 
+function resolveGoogleCallbackUrl(req: Request): string {
+  const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+  const host = req.headers["x-forwarded-host"] || req.get("host") || "studiospace-server-f9ek.onrender.com";
+  const dynamicCallback = `${protocol}://${host}/api/auth/google/callback`;
+
+  const configured = process.env.GOOGLE_CALLBACK_URL || ENV.GOOGLE_CALLBACK_URL;
+  if (configured && !configured.includes("studiospace-server.onrender.com")) {
+    return configured;
+  }
+  return dynamicCallback;
+}
+
 /**
  * Initiates Real Google OAuth 2.0 Authorization Code flow
  * Redirects user to Google Accounts consent screen
@@ -311,8 +323,10 @@ export function googleRedirect(req: Request, res: Response): void {
     } catch {}
   }
 
+  const callbackUri = resolveGoogleCallbackUrl(req);
+
   const options = {
-    redirect_uri: ENV.GOOGLE_CALLBACK_URL,
+    redirect_uri: callbackUri,
     client_id: ENV.GOOGLE_CLIENT_ID,
     access_type: "offline",
     response_type: "code",
@@ -348,6 +362,8 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
       return;
     }
 
+    const callbackUri = resolveGoogleCallbackUrl(req);
+
     // Exchange code for tokens with Google
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
@@ -356,7 +372,7 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
         code,
         client_id: ENV.GOOGLE_CLIENT_ID,
         client_secret: clientSecret,
-        redirect_uri: ENV.GOOGLE_CALLBACK_URL,
+        redirect_uri: callbackUri,
         grant_type: "authorization_code",
       }),
     });

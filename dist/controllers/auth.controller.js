@@ -270,6 +270,16 @@ async function getMe(req, res) {
         res.status(500).json({ error: "Failed to fetch user session" });
     }
 }
+function resolveGoogleCallbackUrl(req) {
+    const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+    const host = req.headers["x-forwarded-host"] || req.get("host") || "studiospace-server-f9ek.onrender.com";
+    const dynamicCallback = `${protocol}://${host}/api/auth/google/callback`;
+    const configured = process.env.GOOGLE_CALLBACK_URL || env_1.ENV.GOOGLE_CALLBACK_URL;
+    if (configured && !configured.includes("studiospace-server.onrender.com")) {
+        return configured;
+    }
+    return dynamicCallback;
+}
 /**
  * Initiates Real Google OAuth 2.0 Authorization Code flow
  * Redirects user to Google Accounts consent screen
@@ -288,8 +298,9 @@ function googleRedirect(req, res) {
         }
         catch { }
     }
+    const callbackUri = resolveGoogleCallbackUrl(req);
     const options = {
-        redirect_uri: env_1.ENV.GOOGLE_CALLBACK_URL,
+        redirect_uri: callbackUri,
         client_id: env_1.ENV.GOOGLE_CLIENT_ID,
         access_type: "offline",
         response_type: "code",
@@ -321,6 +332,7 @@ async function googleCallback(req, res) {
             res.redirect(`${returnClient}/login?error=Google+OAuth+credentials+not+configured`);
             return;
         }
+        const callbackUri = resolveGoogleCallbackUrl(req);
         // Exchange code for tokens with Google
         const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
             method: "POST",
@@ -329,7 +341,7 @@ async function googleCallback(req, res) {
                 code,
                 client_id: env_1.ENV.GOOGLE_CLIENT_ID,
                 client_secret: clientSecret,
-                redirect_uri: env_1.ENV.GOOGLE_CALLBACK_URL,
+                redirect_uri: callbackUri,
                 grant_type: "authorization_code",
             }),
         });
