@@ -27,6 +27,7 @@ app.use((0, cors_1.default)({
             "http://localhost:3000",
             "http://127.0.0.1:3000",
             "https://studiospace-luxury.netlify.app",
+            "https://studiospace-client-nine.vercel.app",
         ];
         if (allowedOrigins.includes(origin) ||
             origin.endsWith(".netlify.app") ||
@@ -51,6 +52,17 @@ app.use(async (_req, _res, next) => {
         console.error("[Database Connection Error in Middleware]:", err);
     }
     next();
+});
+// Root server status
+app.get("/", (_req, res) => {
+    res.status(200).json({
+        status: "ok",
+        service: "StudioSpace API Server",
+        docs: "/api",
+        health: "/health",
+        version: "1.0.0",
+        timestamp: new Date().toISOString(),
+    });
 });
 // Health check endpoint
 app.get("/health", (_req, res) => {
