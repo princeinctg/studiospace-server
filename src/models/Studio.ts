@@ -35,6 +35,7 @@ export interface IStudio extends Document {
   squareFeet: number;
   isAvailable: boolean;
   featured: boolean;
+  defaultBookingDuration?: number;
   tags: string[];
   rules?: string[];
   createdAt: Date;
@@ -133,6 +134,10 @@ const StudioSchema = new Schema<IStudio>(
       type: Boolean,
       default: false,
       index: true,
+    },
+    defaultBookingDuration: {
+      type: Number,
+      default: 8,
     },
     tags: {
       type: [String],

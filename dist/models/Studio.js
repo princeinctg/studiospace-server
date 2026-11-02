@@ -123,6 +123,10 @@ const StudioSchema = new mongoose_1.Schema({
         default: false,
         index: true,
     },
+    defaultBookingDuration: {
+        type: Number,
+        default: 8,
+    },
     tags: {
         type: [String],
         default: [],

@@ -32,7 +32,8 @@ const demoStudios = [
     description: "Expansive 2,400 sq.ft loft flooded with north-facing natural daylight through 14-foot factory arched windows. Features original exposed brick walls, matte concrete floors, full blackout curtains, Profoto D2 lighting packs, and an infinity cyclorama wall.",
     category: "photography",
     amenities: ["Natural Daylight", "Infinity Cyc Wall", "Profoto Lighting", "Blackout Curtains", "Hair & Makeup Station", "High-Speed WiFi", "Client Lounge"],
-    pricePerHour: 125,
+    pricePerHour: 350,
+    defaultBookingDuration: 8,
     location: {
       address: "420 DUMBO Waterfront Ave",
       city: "Brooklyn",
@@ -59,7 +60,8 @@ const demoStudios = [
     description: "State-of-the-art acoustically isolated recording and spatial mixing facility. Equipped with SSL Duality delta console, Genelec 7.1.4 Dolby Atmos monitoring, pristine vintage microphone collection (Neumann U87, Telefunken U47), and private vocal isolation booth.",
     category: "recording",
     amenities: ["Dolby Atmos 7.1.4", "SSL Console", "Neumann Mics", "Vocal Booth", "Acoustic Treatment", "Kitchenette", "Private Parking"],
-    pricePerHour: 160,
+    pricePerHour: 275,
+    defaultBookingDuration: 10,
     location: {
       address: "880 Sunset Blvd, Suite 400",
       city: "Los Angeles",
@@ -86,7 +88,8 @@ const demoStudios = [
     description: "Next-generation 5,000 sq.ft cinematic production soundstage with a 180-degree curved LED volume wall running Unreal Engine 5. Fully soundproofed STC-65 rating, 22-foot lighting grid with motorized trusses, drive-in loading bay, and production control suites.",
     category: "film",
     amenities: ["Unreal Engine LED Wall", "Soundproofed STC-65", "Motorized Lighting Grid", "Drive-in Elephant Door", "Green Room", "Production Offices"],
-    pricePerHour: 320,
+    pricePerHour: 650,
+    defaultBookingDuration: 12,
     location: {
       address: "1420 Film Center Dr",
       city: "Atlanta",
@@ -113,7 +116,8 @@ const demoStudios = [
     description: "Boutique 4-camera 4K podcast lounge designed for visual dialogue. Features Shure SM7B dynamic mics, Blackmagic Studio 4K cameras with motorized teleprompter, Rodecaster Pro II, custom acoustic walnut slat walls, and warm ambient neon illumination.",
     category: "podcast",
     amenities: ["4K Multi-Cam Switcher", "Shure SM7B Microphones", "Custom Lighting Presets", "Soundproofed", "Live Streaming Rack", "Teleprompter"],
-    pricePerHour: 95,
+    pricePerHour: 200,
+    defaultBookingDuration: 8,
     location: {
       address: "310 West Loop South",
       city: "Chicago",

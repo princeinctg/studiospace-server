@@ -43,6 +43,7 @@ export interface StoredStudio {
   squareFeet: number;
   isAvailable: boolean;
   featured: boolean;
+  defaultBookingDuration?: number;
   tags: string[];
   rules?: string[];
   createdAt: string;
@@ -140,7 +141,8 @@ class DataStore {
         description: "Expansive 2,400 sq.ft loft flooded with north-facing natural daylight through 14-foot factory arched windows. Features original exposed brick walls, matte concrete floors, and infinity cyclorama.",
         category: "photography",
         amenities: ["Natural Daylight", "Infinity Cyc Wall", "Profoto Lighting", "Blackout Curtains", "Hair & Makeup Station", "High-Speed WiFi", "Client Lounge"],
-        pricePerHour: 125,
+        pricePerHour: 350,
+        defaultBookingDuration: 8,
         location: {
           address: "420 DUMBO Waterfront Ave",
           city: "Brooklyn",
@@ -172,7 +174,8 @@ class DataStore {
         description: "State-of-the-art acoustically isolated recording facility with SSL Duality delta console, Genelec 7.1.4 Dolby Atmos monitoring, and vintage microphone collection.",
         category: "recording",
         amenities: ["Dolby Atmos 7.1.4", "SSL Console", "Neumann Mics", "Vocal Booth", "Acoustic Treatment", "Kitchenette"],
-        pricePerHour: 160,
+        pricePerHour: 275,
+        defaultBookingDuration: 10,
         location: {
           address: "880 Sunset Blvd, Suite 400",
           city: "Los Angeles",
@@ -203,7 +206,8 @@ class DataStore {
         description: "5,000 sq.ft cinematic production soundstage with a 180-degree curved LED volume wall running Unreal Engine 5. Fully soundproofed STC-65 rating.",
         category: "film",
         amenities: ["Unreal Engine LED Wall", "Soundproofed STC-65", "Motorized Lighting Grid", "Drive-in Elephant Door"],
-        pricePerHour: 320,
+        pricePerHour: 650,
+        defaultBookingDuration: 12,
         location: {
           address: "1420 Film Center Dr",
           city: "Atlanta",
@@ -234,7 +238,8 @@ class DataStore {
         description: "Boutique 4-camera 4K podcast lounge designed for visual dialogue. Shure SM7B dynamic mics and Blackmagic switchers.",
         category: "podcast",
         amenities: ["4K Multi-Cam Switcher", "Shure SM7B Microphones", "Custom Lighting Presets", "Soundproofed"],
-        pricePerHour: 95,
+        pricePerHour: 200,
+        defaultBookingDuration: 8,
         location: {
           address: "310 West Loop South",
           city: "Chicago",
