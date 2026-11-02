@@ -14,6 +14,27 @@ const User_1 = require("../models/User");
 const jwt_1 = require("../utils/jwt");
 const auth_validator_1 = require("../validators/auth.validator");
 const dataStore_1 = require("../store/dataStore");
+function setAuthCookies(res, token) {
+    const isProd = process.env.NODE_ENV === "production";
+    const cookieOptions = {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: (isProd ? "none" : "lax"),
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+    };
+    res.cookie("token", token, cookieOptions);
+    res.cookie("studiospace_token", token, cookieOptions);
+}
+function clearAuthCookies(res) {
+    const isProd = process.env.NODE_ENV === "production";
+    const cookieOptions = {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: (isProd ? "none" : "lax"),
+    };
+    res.clearCookie("token", cookieOptions);
+    res.clearCookie("studiospace_token", cookieOptions);
+}
 async function register(req, res) {
     try {
         const parsed = auth_validator_1.registerSchema.safeParse(req.body);
@@ -45,6 +66,7 @@ async function register(req, res) {
                 email: user.email,
                 role: user.role,
             });
+            setAuthCookies(res, token);
             res.status(201).json({
                 message: "User registered successfully",
                 token,
@@ -78,6 +100,7 @@ async function register(req, res) {
             email: user.email,
             role: user.role,
         });
+        setAuthCookies(res, token);
         res.status(201).json({
             message: "User registered successfully",
             token,
@@ -93,7 +116,7 @@ async function register(req, res) {
     }
     catch (error) {
         console.error("Register Error:", error);
-        res.status(500).json({ error: "Failed to register account" });
+        res.status(500).json({ error: "Failed to register user account" });
     }
 }
 async function login(req, res) {
@@ -124,6 +147,7 @@ async function login(req, res) {
                 email: user.email,
                 role: user.role,
             });
+            setAuthCookies(res, token);
             res.status(200).json({
                 message: "Login successful",
                 token,
@@ -154,6 +178,7 @@ async function login(req, res) {
             email: user.email,
             role: user.role,
         });
+        setAuthCookies(res, token);
         res.status(200).json({
             message: "Login successful",
             token,
@@ -169,16 +194,15 @@ async function login(req, res) {
     }
     catch (error) {
         console.error("Login Error:", error);
-        res.status(500).json({ error: "Failed to process login" });
+        res.status(500).json({ error: "Failed to login user" });
     }
 }
 async function getMe(req, res) {
     try {
         if (!req.user) {
-            res.status(401).json({ error: "Unauthorized" });
+            res.status(401).json({ error: "Not authenticated" });
             return;
         }
-        // Dual-Engine: If MongoDB connected, use Mongoose
         if (mongoose_1.default.connection.readyState === 1) {
             const user = await User_1.User.findById(req.user.userId);
             if (!user) {
@@ -246,6 +270,7 @@ async function googleAuth(req, res) {
                 email: user.email,
                 role: user.role,
             });
+            setAuthCookies(res, token);
             res.status(200).json({
                 message: "Google login successful",
                 token,
@@ -274,6 +299,7 @@ async function googleAuth(req, res) {
             email: user.email,
             role: user.role,
         });
+        setAuthCookies(res, token);
         res.status(200).json({
             message: "Google login successful",
             token,
@@ -292,5 +318,6 @@ async function googleAuth(req, res) {
     }
 }
 async function logout(_req, res) {
+    clearAuthCookies(res);
     res.status(200).json({ message: "Logged out successfully" });
 }
