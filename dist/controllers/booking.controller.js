@@ -238,6 +238,31 @@ async function updateBookingStatus(req, res) {
                 res.status(403).json({ error: "Guests are only permitted to cancel bookings." });
                 return;
             }
+            if (status === "confirmed") {
+                const bookingDate = new Date(booking.date);
+                bookingDate.setHours(0, 0, 0, 0);
+                const nextDay = new Date(bookingDate);
+                nextDay.setDate(nextDay.getDate() + 1);
+                const startMins = toMinutes(booking.startTime);
+                const endMins = toMinutes(booking.endTime);
+                const existingConfirmed = await Booking_1.Booking.find({
+                    _id: { $ne: booking._id },
+                    studio: studio._id,
+                    date: { $gte: bookingDate, $lt: nextDay },
+                    status: "confirmed",
+                });
+                const hasConflict = existingConfirmed.some((existing) => {
+                    const exStart = toMinutes(existing.startTime);
+                    const exEnd = toMinutes(existing.endTime);
+                    return startMins < exEnd && endMins > exStart;
+                });
+                if (hasConflict) {
+                    res.status(409).json({
+                        error: "Double-booking conflict: Another booking for this time slot is already confirmed.",
+                    });
+                    return;
+                }
+            }
             booking.status = status;
             if (cancellationReason) {
                 booking.cancellationReason = cancellationReason;
@@ -267,6 +292,18 @@ async function updateBookingStatus(req, res) {
         if (isGuest && !isHost && !isAdmin && status !== "cancelled") {
             res.status(403).json({ error: "Guests are only permitted to cancel bookings." });
             return;
+        }
+        if (status === "confirmed") {
+            const studioId = existingBooking.studio?.id ||
+                existingBooking.studio?._id ||
+                existingBooking.studio;
+            const hasConflict = dataStore_1.store.checkConflict(studioId, existingBooking.date, existingBooking.startTime, existingBooking.endTime, id);
+            if (hasConflict) {
+                res.status(409).json({
+                    error: "Double-booking conflict: Another booking for this time slot is already confirmed or pending.",
+                });
+                return;
+            }
         }
         const updated = dataStore_1.store.updateBookingStatus(id, status, cancellationReason);
         if (!updated) {

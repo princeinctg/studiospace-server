@@ -524,7 +524,7 @@ class DataStore {
         return false;
     }
     // Booking Operations with Double-Booking Prevention
-    checkConflict(studioId, date, startTime, endTime) {
+    checkConflict(studioId, date, startTime, endTime, excludeBookingId) {
         const toMinutes = (time) => {
             const [h, m] = time.split(":").map(Number);
             return h * 60 + m;
@@ -533,6 +533,9 @@ class DataStore {
         const newStart = toMinutes(startTime);
         const newEnd = toMinutes(endTime);
         return this.db.bookings.some((b) => {
+            if (excludeBookingId && (b.id === excludeBookingId || b._id === excludeBookingId)) {
+                return false;
+            }
             const bDate = b.date.split("T")[0];
             const matchStudio = b.studio?.id === studioId || b.studio?._id === studioId || b.studio === studioId;
             if (!matchStudio || bDate !== targetDate || b.status === "cancelled") {
