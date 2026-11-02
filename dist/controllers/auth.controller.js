@@ -93,12 +93,7 @@ async function register(req, res) {
             });
             return;
         }
-        // In production, never silently fall back to local storage
-        if (process.env.NODE_ENV === "production") {
-            res.status(503).json({ error: "Database service unavailable. Please retry in a few moments." });
-            return;
-        }
-        // Development fallback only
+        // Fallback store when MongoDB Atlas is connecting or offline
         const existing = dataStore_1.store.findUserByEmail(normalizedEmail);
         if (existing) {
             res.status(409).json({ error: "An account with this email already exists." });
@@ -187,12 +182,7 @@ async function login(req, res) {
             });
             return;
         }
-        // In production, never silently fall back to local storage
-        if (process.env.NODE_ENV === "production") {
-            res.status(503).json({ error: "Database service unavailable. Please retry in a few moments." });
-            return;
-        }
-        // Development fallback only
+        // Fallback store when MongoDB Atlas is connecting or offline
         const user = dataStore_1.store.findUserByEmail(normalizedEmail);
         if (!user || !user.password) {
             res.status(401).json({ error: "Invalid email or password." });
@@ -284,14 +274,27 @@ async function getMe(req, res) {
  * Initiates Real Google OAuth 2.0 Authorization Code flow
  * Redirects user to Google Accounts consent screen
  */
-function googleRedirect(_req, res) {
+function googleRedirect(req, res) {
     const rootUrl = "https://accounts.google.com/o/oauth2/v2/auth";
+    const referer = req.headers.referer;
+    let returnClientUrl = env_1.ENV.CLIENT_URL;
+    if (req.query.returnTo && typeof req.query.returnTo === "string") {
+        returnClientUrl = req.query.returnTo;
+    }
+    else if (referer) {
+        try {
+            const parsed = new URL(referer);
+            returnClientUrl = parsed.origin;
+        }
+        catch { }
+    }
     const options = {
         redirect_uri: env_1.ENV.GOOGLE_CALLBACK_URL,
         client_id: env_1.ENV.GOOGLE_CLIENT_ID,
         access_type: "offline",
         response_type: "code",
         prompt: "consent",
+        state: returnClientUrl,
         scope: [
             "https://www.googleapis.com/auth/userinfo.profile",
             "https://www.googleapis.com/auth/userinfo.email",
@@ -306,15 +309,16 @@ function googleRedirect(_req, res) {
  */
 async function googleCallback(req, res) {
     const code = req.query.code;
+    const returnClient = req.query.state || env_1.ENV.CLIENT_URL;
     if (!code) {
-        res.redirect(`${env_1.ENV.CLIENT_URL}/login?error=Google+authorization+code+missing`);
+        res.redirect(`${returnClient}/login?error=Google+authorization+code+missing`);
         return;
     }
     try {
         const clientSecret = process.env.GOOGLE_CLIENT_SECRET || env_1.ENV.GOOGLE_CLIENT_SECRET;
         if (!clientSecret) {
             console.error("[Google OAuth] Missing GOOGLE_CLIENT_SECRET in environment");
-            res.redirect(`${env_1.ENV.CLIENT_URL}/login?error=Google+OAuth+credentials+not+configured`);
+            res.redirect(`${returnClient}/login?error=Google+OAuth+credentials+not+configured`);
             return;
         }
         // Exchange code for tokens with Google
@@ -332,7 +336,7 @@ async function googleCallback(req, res) {
         const tokens = (await tokenRes.json());
         if (!tokens.access_token) {
             console.error("[Google OAuth] Token exchange failed:", tokens.error || "Unknown error");
-            res.redirect(`${env_1.ENV.CLIENT_URL}/login?error=Google+authentication+failed`);
+            res.redirect(`${returnClient}/login?error=Google+authentication+failed`);
             return;
         }
         // Fetch user profile from Google UserInfo endpoint
@@ -341,7 +345,7 @@ async function googleCallback(req, res) {
         });
         const googleUser = (await userRes.json());
         if (!googleUser.email) {
-            res.redirect(`${env_1.ENV.CLIENT_URL}/login?error=Unable+to+retrieve+verified+Google+email`);
+            res.redirect(`${returnClient}/login?error=Unable+to+retrieve+verified+Google+email`);
             return;
         }
         if (mongoose_1.default.connection.readyState !== 1) {
@@ -390,11 +394,11 @@ async function googleCallback(req, res) {
         });
         setAuthCookies(res, token);
         // Redirect to frontend dashboard with token
-        res.redirect(`${env_1.ENV.CLIENT_URL}/dashboard?auth_token=${token}`);
+        res.redirect(`${returnClient}/dashboard?auth_token=${token}`);
     }
     catch (error) {
         console.error("[Google OAuth] Callback error:", error.message);
-        res.redirect(`${env_1.ENV.CLIENT_URL}/login?error=Google+login+processing+failed`);
+        res.redirect(`${returnClient}/login?error=Google+login+processing+failed`);
     }
 }
 /**
