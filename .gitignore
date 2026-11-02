@@ -28,3 +28,6 @@ Thumbs.db
 
 # Local database store
 .data/
+
+# Local Netlify folder
+.netlify

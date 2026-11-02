@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import os from "os";
 import bcrypt from "bcryptjs";
 
 export interface StoredUser {
@@ -73,7 +74,10 @@ interface LocalDatabase {
   bookings: StoredBooking[];
 }
 
-const DATA_DIR = path.join(process.cwd(), ".data");
+const DATA_DIR =
+  process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME
+    ? path.join(os.tmpdir(), "studiospace-data")
+    : path.join(process.cwd(), ".data");
 const STORE_PATH = path.join(DATA_DIR, "studiospace-store.json");
 
 class DataStore {
@@ -87,8 +91,12 @@ class DataStore {
   private init() {
     if (this.initialized) return;
 
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+    } catch (e) {
+      console.warn("[DataStore] Warning: Could not create DATA_DIR, using memory-store:", e);
     }
 
     // Seed initial demo data
@@ -278,9 +286,12 @@ class DataStore {
 
   private save() {
     try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
       fs.writeFileSync(STORE_PATH, JSON.stringify(this.db, null, 2), "utf-8");
     } catch (err) {
-      console.error("[DataStore] Save error:", err);
+      console.warn("[DataStore] Save warning:", err);
     }
   }
 

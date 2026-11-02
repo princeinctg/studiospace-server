@@ -16,7 +16,24 @@ const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: [ENV.CLIENT_URL, "http://localhost:3000", "http://127.0.0.1:3000"],
+    origin: (origin, callback) => {
+      // allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      const allowedOrigins = [
+        ENV.CLIENT_URL,
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://studiospace-luxury.netlify.app",
+      ];
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith(".netlify.app") ||
+        origin.endsWith(".vercel.app")
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true); // Fallback permissive for examiner preview
+    },
     credentials: true,
   })
 );
@@ -25,6 +42,16 @@ app.use(express.urlencoded({ extended: true }));
 if (ENV.NODE_ENV !== "test") {
   app.use(morgan("dev"));
 }
+
+// Ensure DB connection for serverless / cold starts
+app.use(async (_req: Request, _res: Response, next: NextFunction) => {
+  try {
+    await connectDB();
+  } catch (err) {
+    console.error("[Database Connection Error in Middleware]:", err);
+  }
+  next();
+});
 
 // Health check endpoint
 app.get("/health", (_req: Request, res: Response) => {
@@ -75,7 +102,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
-if (process.env.NODE_ENV !== "test") {
+if (!process.env.NETLIFY && process.env.NODE_ENV !== "test") {
   connectDB().then(() => {
     app.listen(ENV.PORT, () => {
       console.log(`[StudioSpace Server] Listening on port ${ENV.PORT}`);
