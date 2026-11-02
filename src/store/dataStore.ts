@@ -108,7 +108,7 @@ class DataStore {
     const initialHost: StoredUser = {
       id: "host-imdatul-hoque",
       _id: "host-imdatul-hoque",
-      name: "Imdatul Hoque (Host)",
+      name: "Imdatul Hoque",
       email: "host@studiospace.com",
       password: hostHash,
       role: "host",
@@ -122,7 +122,7 @@ class DataStore {
     const initialGuest: StoredUser = {
       id: "guest-imrita-aksa",
       _id: "guest-imrita-aksa",
-      name: "Imrita Aksa (Examiner / Guest)",
+      name: "Imrita Aksa",
       email: "guest@studiospace.com",
       password: guestHash,
       role: "guest",

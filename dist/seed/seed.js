@@ -11,7 +11,7 @@ const User_1 = require("../models/User");
 const Studio_1 = require("../models/Studio");
 const demoUsers = [
     {
-        name: "Imdatul Hoque (Host)",
+        name: "Imdatul Hoque",
         email: "host@studiospace.com",
         password: "HostPassword123!",
         role: "host",
@@ -20,7 +20,7 @@ const demoUsers = [
         bio: "Commercial director and studio curator based in Brooklyn, NY. Passionate about providing film and photography creators with top-tier gear.",
     },
     {
-        name: "Imrita Aksa (Examiner / Guest)",
+        name: "Imrita Aksa",
         email: "guest@studiospace.com",
         password: "GuestPassword123!",
         role: "guest",

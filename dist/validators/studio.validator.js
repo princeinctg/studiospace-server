@@ -17,21 +17,26 @@ exports.hourlyRateValidation = zod_1.z
 exports.createStudioSchema = zod_1.z.object({
     title: exports.studioTitleValidation,
     description: zod_1.z
-        .string({ required_error: "Description is required" })
-        .refine((val) => typeof val === "string" && val.trim().length > 0, "Description cannot be empty")
-        .default("Creative production studio equipped for professional projects."),
-    category: zod_1.z.enum(["photography", "film", "recording", "podcast", "dance", "art"]).default("photography"),
-    amenities: zod_1.z.array(zod_1.z.string()).default([]),
+        .string()
+        .optional()
+        .transform((val) => val && val.trim().length > 0
+        ? val.trim()
+        : "Modern creative studio equipped for photo, film, audio, and visual productions."),
+    category: zod_1.z
+        .enum(["photography", "film", "recording", "podcast", "dance", "art"])
+        .default("photography"),
+    amenities: zod_1.z.array(zod_1.z.string()).default(["High-Speed Fiber WiFi", "Natural Daylight"]),
     pricePerHour: exports.hourlyRateValidation.default(100),
     securityDeposit: zod_1.z.number().min(0).default(0).optional(),
     defaultBookingDuration: zod_1.z.number().min(1).default(8).optional(),
     hostName: zod_1.z.string().optional(),
     hostEmail: zod_1.z.string().optional(),
     imageUrl: zod_1.z.string().optional(),
-    location: zod_1.z.object({
-        address: zod_1.z.string().min(1, "Address is required").default("Main Studio Street"),
-        city: zod_1.z.string().min(1, "City is required").default("New York"),
-        country: zod_1.z.string().default("United States"),
+    location: zod_1.z
+        .object({
+        address: zod_1.z.string().optional().default("100 Studio Way"),
+        city: zod_1.z.string().optional().default("New York"),
+        country: zod_1.z.string().optional().default("United States"),
         postalCode: zod_1.z.string().optional(),
         coordinates: zod_1.z
             .object({
@@ -39,7 +44,8 @@ exports.createStudioSchema = zod_1.z.object({
             lng: zod_1.z.number(),
         })
             .optional(),
-    }).default({
+    })
+        .default({
         address: "100 Studio Way",
         city: "New York",
         country: "United States",
