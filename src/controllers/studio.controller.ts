@@ -305,9 +305,29 @@ export async function updateStudio(
         return;
       }
 
+      const updateData: any = { ...parsed.data };
+      if (updateData.price && !updateData.pricePerHour) {
+        updateData.pricePerHour = updateData.price;
+        delete updateData.price;
+      }
+      if (updateData.area && !updateData.squareFeet) {
+        updateData.squareFeet = updateData.area;
+        delete updateData.area;
+      }
+      if (updateData.defaultBookingHours && !updateData.defaultBookingDuration) {
+        updateData.defaultBookingDuration = updateData.defaultBookingHours;
+        delete updateData.defaultBookingHours;
+      }
+      if (updateData.image) {
+        if (!updateData.images || updateData.images.length === 0) {
+          updateData.images = [updateData.image];
+        }
+        delete updateData.image;
+      }
+
       const updatedStudio = await Studio.findByIdAndUpdate(
         studio._id,
-        { $set: parsed.data },
+        { $set: updateData },
         { new: true, runValidators: true }
       ).populate("host", "name email avatar");
 

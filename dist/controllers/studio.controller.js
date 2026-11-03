@@ -258,7 +258,26 @@ async function updateStudio(req, res) {
                 });
                 return;
             }
-            const updatedStudio = await Studio_1.Studio.findByIdAndUpdate(studio._id, { $set: parsed.data }, { new: true, runValidators: true }).populate("host", "name email avatar");
+            const updateData = { ...parsed.data };
+            if (updateData.price && !updateData.pricePerHour) {
+                updateData.pricePerHour = updateData.price;
+                delete updateData.price;
+            }
+            if (updateData.area && !updateData.squareFeet) {
+                updateData.squareFeet = updateData.area;
+                delete updateData.area;
+            }
+            if (updateData.defaultBookingHours && !updateData.defaultBookingDuration) {
+                updateData.defaultBookingDuration = updateData.defaultBookingHours;
+                delete updateData.defaultBookingHours;
+            }
+            if (updateData.image) {
+                if (!updateData.images || updateData.images.length === 0) {
+                    updateData.images = [updateData.image];
+                }
+                delete updateData.image;
+            }
+            const updatedStudio = await Studio_1.Studio.findByIdAndUpdate(studio._id, { $set: updateData }, { new: true, runValidators: true }).populate("host", "name email avatar");
             res.status(200).json({
                 message: "Studio listing updated successfully",
                 studio: updatedStudio || studio,

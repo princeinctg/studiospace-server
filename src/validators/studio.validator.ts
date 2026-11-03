@@ -19,6 +19,7 @@ export const hourlyRateValidation = z
 
 export const createStudioSchema = z.object({
   title: studioTitleValidation,
+  slug: z.string().optional(),
   description: z
     .string()
     .optional()
@@ -32,32 +33,46 @@ export const createStudioSchema = z.object({
     .default("photography"),
   amenities: z.array(z.string()).default(["High-Speed Fiber WiFi", "Natural Daylight"]),
   pricePerHour: hourlyRateValidation.default(100),
+  price: hourlyRateValidation.optional(),
   securityDeposit: z.number().min(0).default(0).optional(),
   defaultBookingDuration: z.number().min(1).default(8).optional(),
+  defaultBookingHours: z.number().min(1).optional(),
   hostName: z.string().optional(),
   hostEmail: z.string().optional(),
   imageUrl: z.string().optional(),
   location: z
-    .object({
-      address: z.string().optional().default("100 Studio Way"),
-      city: z.string().optional().default("New York"),
-      country: z.string().optional().default("United States"),
-      postalCode: z.string().optional(),
-      coordinates: z
-        .object({
-          lat: z.number(),
-          lng: z.number(),
-        })
-        .optional(),
-    })
+    .union([
+      z.string().transform((str) => ({
+        address: str.split(",")[0]?.trim() || str,
+        city: str.split(",")[0]?.trim() || "New York",
+        country: str.split(",")[1]?.trim() || "United States",
+        postalCode: "10001",
+      })),
+      z.object({
+        address: z.string().optional().default("100 Studio Way"),
+        city: z.string().optional().default("New York"),
+        country: z.string().optional().default("United States"),
+        postalCode: z.string().optional(),
+        coordinates: z
+          .object({
+            lat: z.number(),
+            lng: z.number(),
+          })
+          .optional(),
+      }),
+    ])
     .default({
       address: "100 Studio Way",
       city: "New York",
       country: "United States",
     }),
   images: z.array(z.string()).default([]).optional(),
+  image: z.string().optional(),
   capacity: z.number().min(1).default(10),
   squareFeet: z.number().min(1).default(800),
+  area: z.number().optional(),
+  rating: z.number().min(1).max(5).optional(),
+  reviewCount: z.number().min(0).optional(),
   tags: z.array(z.string()).default([]),
   rules: z.array(z.string()).optional(),
   featured: z.boolean().default(false).optional(),
