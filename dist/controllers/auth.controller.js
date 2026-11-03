@@ -272,7 +272,8 @@ async function getMe(req, res) {
 }
 function resolveGoogleCallbackUrl(req) {
     const configured = process.env.GOOGLE_CALLBACK_URL;
-    if (configured && configured.trim()) {
+    // If explicitly configured without the legacy mismatched /api/auth/google/callback path, respect it
+    if (configured && configured.trim() && !configured.includes("/api/auth/google/callback")) {
         return configured.trim();
     }
     const host = req.headers["x-forwarded-host"] || req.get("host") || "";
@@ -280,7 +281,7 @@ function resolveGoogleCallbackUrl(req) {
         const protocol = req.headers["x-forwarded-proto"] || req.protocol || "http";
         return `${protocol}://${host}/api/auth/google/callback`;
     }
-    // Production Render: Matches Authorized Redirect URI in Google Cloud Console
+    // Production Render: Matches the Authorized Redirect URI configured in Google Cloud Console
     return "https://studiospace-server-f9ek.onrender.com/";
 }
 /**
