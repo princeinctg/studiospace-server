@@ -276,13 +276,18 @@ function resolveGoogleCallbackUrl(req) {
         const protocol = req.headers["x-forwarded-proto"] || req.protocol || "http";
         return `${protocol}://${host}/api/auth/google/callback`;
     }
-    // Explicit configuration takes precedence
-    const configured = process.env.GOOGLE_CALLBACK_URL || env_1.ENV.GOOGLE_CALLBACK_URL;
-    if (configured && configured.trim()) {
+    // If callback request arrived directly at /api/auth/google/callback
+    const urlPath = req.originalUrl || req.url || "";
+    if (urlPath.includes("/api/auth/google/callback")) {
+        return "https://studiospace-server-f9ek.onrender.com/api/auth/google/callback";
+    }
+    const configured = process.env.GOOGLE_CALLBACK_URL;
+    // If explicitly configured with a custom non-default path, respect it
+    if (configured && configured.trim() && configured.trim() !== "https://studiospace-server-f9ek.onrender.com/api/auth/google/callback") {
         return configured.trim();
     }
-    // Canonical Production Render callback URL
-    return "https://studiospace-server-f9ek.onrender.com/api/auth/google/callback";
+    // Verified Authorized Redirect URI matching current Google Cloud Console registration
+    return "https://studiospace-server-f9ek.onrender.com/";
 }
 /**
  * Initiates Real Google OAuth 2.0 Authorization Code flow
