@@ -282,7 +282,7 @@ export async function updateBookingStatus(
     }
 
     const id = String(req.params.id);
-    if (!req.body.status) {
+    if (!req.body.status && !req.body.paymentStatus) {
       req.body.status = "cancelled";
     }
     const parsed = updateBookingStatusSchema.safeParse(req.body);

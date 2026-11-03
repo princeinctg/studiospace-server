@@ -239,7 +239,7 @@ async function updateBookingStatus(req, res) {
             return;
         }
         const id = String(req.params.id);
-        if (!req.body.status) {
+        if (!req.body.status && !req.body.paymentStatus) {
             req.body.status = "cancelled";
         }
         const parsed = booking_validator_1.updateBookingStatusSchema.safeParse(req.body);
