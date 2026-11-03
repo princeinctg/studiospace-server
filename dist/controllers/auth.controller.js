@@ -12,6 +12,7 @@ exports.googleAuth = googleAuth;
 exports.logout = logout;
 const mongoose_1 = __importDefault(require("mongoose"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const User_1 = require("../models/User");
 const jwt_1 = require("../utils/jwt");
 const auth_validator_1 = require("../validators/auth.validator");
@@ -486,20 +487,37 @@ async function googleAuth(req, res) {
         let userAvatar = avatar;
         let userGoogleId = googleId;
         const assignedRole = role === "host" ? "host" : "guest";
-        // Verify Google ID token if provided
+        // Verify Google ID token or Firebase Auth ID token if provided
         if (credential) {
             try {
                 const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
                 if (verifyRes.ok) {
                     const payload = (await verifyRes.json());
-                    userEmail = payload.email;
-                    userName = payload.name;
-                    userAvatar = payload.picture;
-                    userGoogleId = payload.sub;
+                    if (payload.email)
+                        userEmail = payload.email;
+                    if (payload.name)
+                        userName = payload.name;
+                    if (payload.picture)
+                        userAvatar = payload.picture;
+                    if (payload.sub)
+                        userGoogleId = payload.sub;
+                }
+                else {
+                    // Decode Firebase Auth JWT token if issued by Firebase
+                    const decoded = jsonwebtoken_1.default.decode(credential);
+                    if (decoded && decoded.email) {
+                        userEmail = decoded.email;
+                        if (decoded.name)
+                            userName = decoded.name;
+                        if (decoded.picture)
+                            userAvatar = decoded.picture;
+                        if (decoded.sub || decoded.user_id)
+                            userGoogleId = decoded.sub || decoded.user_id;
+                    }
                 }
             }
             catch {
-                // Fallback to body
+                // Fallback to request body
             }
         }
         if (!userEmail) {

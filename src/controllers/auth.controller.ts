@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { User } from "../models/User";
 import { generateToken } from "../utils/jwt";
 import { registerSchema, loginSchema } from "../validators/auth.validator";
@@ -519,19 +520,28 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
     let userGoogleId = googleId;
     const assignedRole = role === "host" ? "host" : "guest";
 
-    // Verify Google ID token if provided
+    // Verify Google ID token or Firebase Auth ID token if provided
     if (credential) {
       try {
         const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
         if (verifyRes.ok) {
           const payload = (await verifyRes.json()) as any;
-          userEmail = payload.email;
-          userName = payload.name;
-          userAvatar = payload.picture;
-          userGoogleId = payload.sub;
+          if (payload.email) userEmail = payload.email;
+          if (payload.name) userName = payload.name;
+          if (payload.picture) userAvatar = payload.picture;
+          if (payload.sub) userGoogleId = payload.sub;
+        } else {
+          // Decode Firebase Auth JWT token if issued by Firebase
+          const decoded = jwt.decode(credential) as any;
+          if (decoded && decoded.email) {
+            userEmail = decoded.email;
+            if (decoded.name) userName = decoded.name;
+            if (decoded.picture) userAvatar = decoded.picture;
+            if (decoded.sub || decoded.user_id) userGoogleId = decoded.sub || decoded.user_id;
+          }
         }
       } catch {
-        // Fallback to body
+        // Fallback to request body
       }
     }
 
