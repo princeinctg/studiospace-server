@@ -295,15 +295,17 @@ export async function getMe(req: AuthenticatedRequest, res: Response): Promise<v
 }
 
 function resolveGoogleCallbackUrl(req: Request): string {
-  const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
-  const host = req.headers["x-forwarded-host"] || req.get("host") || "studiospace-server-f9ek.onrender.com";
-  const dynamicCallback = `${protocol}://${host}/api/auth/google/callback`;
-
-  const configured = process.env.GOOGLE_CALLBACK_URL || ENV.GOOGLE_CALLBACK_URL;
-  if (configured && !configured.includes("studiospace-server.onrender.com")) {
-    return configured;
+  const configured = process.env.GOOGLE_CALLBACK_URL;
+  if (configured && configured.trim()) {
+    return configured.trim();
   }
-  return dynamicCallback;
+  const host = req.headers["x-forwarded-host"] || req.get("host") || "";
+  if (typeof host === "string" && (host.includes("localhost") || host.includes("127.0.0.1"))) {
+    const protocol = req.headers["x-forwarded-proto"] || req.protocol || "http";
+    return `${protocol}://${host}/api/auth/google/callback`;
+  }
+  // Production Render: Matches Authorized Redirect URI in Google Cloud Console
+  return "https://studiospace-server-f9ek.onrender.com/";
 }
 
 /**
@@ -312,15 +314,20 @@ function resolveGoogleCallbackUrl(req: Request): string {
  */
 export function googleRedirect(req: Request, res: Response): void {
   const rootUrl = "https://accounts.google.com/o/oauth2/v2/auth";
-  const referer = req.headers.referer;
-  let returnClientUrl = ENV.CLIENT_URL;
-  if (req.query.returnTo && typeof req.query.returnTo === "string") {
-    returnClientUrl = req.query.returnTo;
-  } else if (referer) {
+  
+  let stateParam = req.query.state as string;
+  if (!stateParam) {
+    const returnClientUrl = (req.query.returnTo as string) || req.headers.referer || ENV.CLIENT_URL;
+    let cleanOrigin = ENV.CLIENT_URL;
     try {
-      const parsed = new URL(referer);
-      returnClientUrl = parsed.origin;
+      cleanOrigin = new URL(returnClientUrl).origin;
     } catch {}
+    stateParam = JSON.stringify({
+      returnTo: cleanOrigin,
+      role: (req.query.role as string) || "guest",
+      redirect: (req.query.redirect as string) || "/dashboard",
+      from: req.query.from || "login",
+    });
   }
 
   const callbackUri = resolveGoogleCallbackUrl(req);
@@ -331,7 +338,7 @@ export function googleRedirect(req: Request, res: Response): void {
     access_type: "offline",
     response_type: "code",
     prompt: "consent",
-    state: returnClientUrl,
+    state: stateParam,
     scope: [
       "https://www.googleapis.com/auth/userinfo.profile",
       "https://www.googleapis.com/auth/userinfo.email",
@@ -347,10 +354,35 @@ export function googleRedirect(req: Request, res: Response): void {
  */
 export async function googleCallback(req: Request, res: Response): Promise<void> {
   const code = req.query.code as string;
-  const returnClient = (req.query.state as string) || ENV.CLIENT_URL;
+  const rawState = req.query.state as string;
+
+  let returnClient = ENV.CLIENT_URL;
+  let userRole: "guest" | "host" = "guest";
+  let redirectPath = "/dashboard";
+  let fromPage = "login";
+
+  if (rawState) {
+    try {
+      const parsed = JSON.parse(rawState);
+      if (parsed.returnTo) returnClient = parsed.returnTo;
+      if (parsed.role === "host" || parsed.role === "guest") userRole = parsed.role;
+      if (parsed.redirect) redirectPath = parsed.redirect;
+      if (parsed.from) fromPage = parsed.from;
+    } catch {
+      if (rawState.startsWith("http")) {
+        try {
+          const u = new URL(rawState);
+          returnClient = u.origin;
+          if (u.pathname && u.pathname !== "/") redirectPath = u.pathname;
+        } catch {
+          returnClient = rawState;
+        }
+      }
+    }
+  }
 
   if (!code) {
-    res.redirect(`${returnClient}/login?error=Google+authorization+code+missing`);
+    res.redirect(`${returnClient}/${fromPage}?error=Google+authorization+code+missing`);
     return;
   }
 
@@ -358,7 +390,7 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET || ENV.GOOGLE_CLIENT_SECRET;
     if (!clientSecret) {
       console.error("[Google OAuth] Missing GOOGLE_CLIENT_SECRET in environment");
-      res.redirect(`${returnClient}/login?error=Google+OAuth+credentials+not+configured`);
+      res.redirect(`${returnClient}/${fromPage}?error=Google+OAuth+credentials+not+configured`);
       return;
     }
 
@@ -380,7 +412,7 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
     const tokens = (await tokenRes.json()) as any;
     if (!tokens.access_token) {
       console.error("[Google OAuth] Token exchange failed:", tokens.error || "Unknown error");
-      res.redirect(`${returnClient}/login?error=Google+authentication+failed`);
+      res.redirect(`${returnClient}/${fromPage}?error=Google+authentication+failed`);
       return;
     }
 
@@ -391,7 +423,7 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
     const googleUser = (await userRes.json()) as any;
 
     if (!googleUser.email) {
-      res.redirect(`${returnClient}/login?error=Unable+to+retrieve+verified+Google+email`);
+      res.redirect(`${returnClient}/${fromPage}?error=Unable+to+retrieve+verified+Google+email`);
       return;
     }
 
@@ -419,7 +451,7 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
           email: normalizedEmail,
           googleId: googleUser.sub,
           avatar: googleUser.picture || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
-          role: "guest",
+          role: userRole,
           provider: "google",
         });
       }
@@ -436,7 +468,7 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
           email: normalizedEmail,
           avatar: googleUser.picture || "",
           googleId: googleUser.sub,
-          role: "guest",
+          role: userRole,
           provider: "google",
         });
       }
@@ -450,22 +482,19 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
 
     setAuthCookies(res, token);
 
-    // Redirect to frontend dashboard with token
-    let targetBase = returnClient.startsWith("http") ? returnClient : `${ENV.CLIENT_URL}/${returnClient.replace(/^\/+/, "")}`;
+    // Redirect to frontend destination with token
     try {
-      const parsed = new URL(targetBase);
-      if (parsed.pathname === "/" || parsed.pathname === "") {
-        parsed.pathname = "/dashboard";
-      }
-      parsed.searchParams.set("auth_token", token);
-      res.redirect(parsed.toString());
+      const cleanTarget = redirectPath.startsWith("/") ? redirectPath : `/${redirectPath}`;
+      const targetUrl = new URL(cleanTarget, returnClient);
+      targetUrl.searchParams.set("auth_token", token);
+      res.redirect(targetUrl.toString());
     } catch {
-      const cleanBase = targetBase.replace(/\/+$/, "");
+      const cleanBase = returnClient.replace(/\/+$/, "");
       res.redirect(`${cleanBase}/dashboard?auth_token=${token}`);
     }
   } catch (error: any) {
     console.error("[Google OAuth] Callback error:", error.message);
-    res.redirect(`${returnClient}/login?error=Google+login+processing+failed`);
+    res.redirect(`${returnClient}/${fromPage}?error=Google+login+processing+failed`);
   }
 }
 

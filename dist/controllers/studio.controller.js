@@ -134,10 +134,38 @@ async function getFeaturedStudios(req, res) {
 }
 async function getStudioById(req, res) {
     try {
-        const id = String(req.params.id);
+        const rawId = String(req.params.id);
         if (mongoose_1.default.connection.readyState === 1) {
-            const query = id.match(/^[0-9a-fA-F]{24}$/) ? { _id: id } : { slug: id };
-            const studio = await Studio_1.Studio.findOne(query).populate("host", "name email avatar bio phone createdAt");
+            const DEMO_ID_MAP = {
+                "demo-1": "6ae996e6749893a06af61de3",
+                "demo-2": "6ae99720749893a06af61dfa",
+                "demo-3": "6ae99721749893a06af61dfc",
+                "demo-4": "6ae99721749893a06af61dfe",
+                "demo-5": "6ae983c20981efdd6935dded",
+                "manhattan-creative-photography-studio": "6ae983c20981efdd6935dded",
+                "demo-6": "6ae99721749893a06af61e00",
+                "demo-7": "6ae99722749893a06af61e02",
+                "demo-8": "6ae99722749893a06af61e04",
+            };
+            const resolvedId = DEMO_ID_MAP[rawId] || rawId;
+            let studio = null;
+            if (mongoose_1.default.Types.ObjectId.isValid(resolvedId)) {
+                studio = await Studio_1.Studio.findById(resolvedId).populate("host", "name email avatar bio phone createdAt");
+            }
+            if (!studio) {
+                // Try exact slug
+                studio = await Studio_1.Studio.findOne({ slug: resolvedId }).populate("host", "name email avatar bio phone createdAt");
+            }
+            if (!studio) {
+                // Try slug starting with resolvedId (handles the random hash suffixes like the-industrial-daylight-loft-4fa5)
+                const cleanSlugPrefix = resolvedId.replace(/-[a-z0-9]{4}$/i, "");
+                studio = await Studio_1.Studio.findOne({
+                    $or: [
+                        { slug: new RegExp(`^${cleanSlugPrefix}`, "i") },
+                        { title: new RegExp(`^${cleanSlugPrefix.replace(/-/g, " ")}`, "i") },
+                    ],
+                }).populate("host", "name email avatar bio phone createdAt");
+            }
             if (!studio) {
                 res.status(404).json({ error: "Studio not found" });
                 return;
@@ -145,7 +173,7 @@ async function getStudioById(req, res) {
             res.status(200).json({ studio });
             return;
         }
-        const studio = dataStore_1.store.getStudioById(id);
+        const studio = dataStore_1.store.getStudioById(rawId);
         if (!studio) {
             res.status(404).json({ error: "Studio not found" });
             return;

@@ -12,6 +12,7 @@ const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const env_1 = require("./config/env");
 const database_1 = require("./config/database");
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
+const auth_controller_1 = require("./controllers/auth.controller");
 const studio_routes_1 = __importDefault(require("./routes/studio.routes"));
 const booking_routes_1 = __importDefault(require("./routes/booking.routes"));
 const bookmark_routes_1 = __importDefault(require("./routes/bookmark.routes"));
@@ -55,8 +56,11 @@ app.use(async (_req, _res, next) => {
     }
     next();
 });
-// Root server status
-app.get("/", (_req, res) => {
+// Root server status or Google OAuth callback fallback
+app.get("/", (req, res) => {
+    if (req.query.code || req.query.error) {
+        return (0, auth_controller_1.googleCallback)(req, res);
+    }
     const dbStatus = (0, database_1.getDatabaseStatus)();
     res.status(200).json({
         status: "ok",

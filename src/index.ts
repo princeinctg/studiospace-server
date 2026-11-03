@@ -7,6 +7,7 @@ import rateLimit from "express-rate-limit";
 import { ENV } from "./config/env";
 import { connectDB, disconnectDB, getDatabaseStatus } from "./config/database";
 import authRoutes from "./routes/auth.routes";
+import { googleCallback } from "./controllers/auth.controller";
 import studioRoutes from "./routes/studio.routes";
 import bookingRoutes from "./routes/booking.routes";
 import bookmarkRoutes from "./routes/bookmark.routes";
@@ -56,8 +57,11 @@ app.use(async (_req: Request, _res: Response, next: NextFunction) => {
   next();
 });
 
-// Root server status
-app.get("/", (_req: Request, res: Response) => {
+// Root server status or Google OAuth callback fallback
+app.get("/", (req: Request, res: Response) => {
+  if (req.query.code || req.query.error) {
+    return googleCallback(req, res);
+  }
   const dbStatus = getDatabaseStatus();
   res.status(200).json({
     status: "ok",

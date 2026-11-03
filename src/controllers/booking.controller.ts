@@ -59,6 +59,15 @@ export async function createBooking(
         studio = await Studio.findOne({ slug: resolvedStudioId });
       }
       if (!studio) {
+        const cleanSlugPrefix = resolvedStudioId.replace(/-[a-z0-9]{4}$/i, "");
+        studio = await Studio.findOne({
+          $or: [
+            { slug: new RegExp(`^${cleanSlugPrefix}`, "i") },
+            { title: new RegExp(`^${cleanSlugPrefix.replace(/-/g, " ")}`, "i") },
+          ],
+        });
+      }
+      if (!studio) {
         res.status(404).json({ error: "Studio not found" });
         return;
       }
@@ -75,8 +84,11 @@ export async function createBooking(
       nextDay.setDate(nextDay.getDate() + 1);
 
       const startMins = toMinutes(startTime);
-      const endMins = toMinutes(endTime);
-      const durationHours = (endMins - startMins) / 60;
+      let endMins = toMinutes(endTime);
+      if (endMins <= startMins) {
+        endMins += 24 * 60; // Allow overnight booking window
+      }
+      const durationHours = Math.round(((endMins - startMins) / 60) * 10) / 10;
 
       if (durationHours <= 0 || durationHours > 24) {
         res.status(400).json({ error: "Booking duration must be between 1 and 24 hours" });
