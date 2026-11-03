@@ -512,11 +512,12 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
  */
 export async function googleAuth(req: Request, res: Response): Promise<void> {
   try {
-    const { email, name, avatar, googleId, credential } = req.body;
+    const { email, name, avatar, googleId, credential, role } = req.body;
     let userEmail = email;
     let userName = name;
     let userAvatar = avatar;
     let userGoogleId = googleId;
+    const assignedRole = role === "host" ? "host" : "guest";
 
     // Verify Google ID token if provided
     if (credential) {
@@ -562,7 +563,7 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
           avatar:
             userAvatar ||
             "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
-          role: "guest",
+          role: assignedRole,
           provider: "google",
           googleId: userGoogleId || "google_oauth_" + Date.now(),
         });
@@ -599,7 +600,7 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
         avatar:
           userAvatar ||
           "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
-        role: "guest",
+        role: assignedRole,
         provider: "google",
         googleId: userGoogleId,
       });

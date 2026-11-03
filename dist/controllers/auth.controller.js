@@ -480,11 +480,12 @@ async function googleCallback(req, res) {
  */
 async function googleAuth(req, res) {
     try {
-        const { email, name, avatar, googleId, credential } = req.body;
+        const { email, name, avatar, googleId, credential, role } = req.body;
         let userEmail = email;
         let userName = name;
         let userAvatar = avatar;
         let userGoogleId = googleId;
+        const assignedRole = role === "host" ? "host" : "guest";
         // Verify Google ID token if provided
         if (credential) {
             try {
@@ -527,7 +528,7 @@ async function googleAuth(req, res) {
                     email: normalizedEmail,
                     avatar: userAvatar ||
                         "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
-                    role: "guest",
+                    role: assignedRole,
                     provider: "google",
                     googleId: userGoogleId || "google_oauth_" + Date.now(),
                 });
@@ -559,7 +560,7 @@ async function googleAuth(req, res) {
                 email: normalizedEmail,
                 avatar: userAvatar ||
                     "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
-                role: "guest",
+                role: assignedRole,
                 provider: "google",
                 googleId: userGoogleId,
             });
