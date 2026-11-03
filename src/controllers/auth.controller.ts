@@ -349,10 +349,7 @@ export function googleRedirect(req: Request, res: Response): void {
     response_type: "code",
     prompt: "consent",
     state: stateParam,
-    scope: [
-      "https://www.googleapis.com/auth/userinfo.profile",
-      "https://www.googleapis.com/auth/userinfo.email",
-    ].join(" "),
+    scope: "openid email profile",
   };
   const qs = new URLSearchParams(options);
   res.redirect(`${rootUrl}?${qs.toString()}`);
