@@ -546,7 +546,7 @@ class DataStore {
     return result;
   }
 
-  getFeaturedStudios(limit = 8): StoredStudio[] {
+  getFeaturedStudios(limit = 50): StoredStudio[] {
     const featured = this.db.studios.filter((s) => s.isAvailable && s.featured);
     return featured.length > 0 ? featured.slice(0, limit) : this.db.studios.slice(0, limit);
   }
@@ -714,6 +714,19 @@ class DataStore {
     booking.updatedAt = new Date().toISOString();
     this.save();
     return booking;
+  }
+
+  updateBooking(id: string, updates: Partial<StoredBooking>): StoredBooking | null {
+    const idx = this.db.bookings.findIndex((b) => b.id === id || b._id === id);
+    if (idx === -1) return null;
+
+    this.db.bookings[idx] = {
+      ...this.db.bookings[idx],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    this.save();
+    return this.db.bookings[idx];
   }
 
   // Bookmark Operations

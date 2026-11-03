@@ -98,6 +98,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/studios", studioRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/bookmarks", bookmarkRoutes);
+app.use("/api/wishlist", bookmarkRoutes);
 
 // Root API welcome
 app.get("/api", (_req: Request, res: Response) => {

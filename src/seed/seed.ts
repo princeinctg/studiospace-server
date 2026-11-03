@@ -308,37 +308,42 @@ export async function runSeed(): Promise<void> {
   console.log("[Seed] Connecting to MongoDB...");
   await mongoose.connect(ENV.MONGODB_URI);
 
-  console.log("[Seed] Clearing previous demo data...");
-  await User.deleteMany({ email: { $in: demoUsers.map((u) => u.email) } });
-
-  console.log("[Seed] Creating demo users...");
+  console.log("[Seed] Ensuring demo users exist (idempotent)...");
   const createdUsers = [];
   for (const u of demoUsers) {
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(u.password, salt);
-    const user = await User.create({
-      ...u,
-      password: hashedPassword,
-    });
+    let user = await User.findOne({ email: u.email.toLowerCase().trim() });
+    if (!user) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(u.password, salt);
+      user = await User.create({
+        ...u,
+        email: u.email.toLowerCase().trim(),
+        password: hashedPassword,
+      });
+      console.log(`[Seed] Created User: ${user.name} (${user.email})`);
+    } else {
+      console.log(`[Seed] User already exists: ${user.name} (${user.email})`);
+    }
     createdUsers.push(user);
-    console.log(`[Seed] Created User: ${user.name} (${user.email})`);
   }
 
   const hostUser = createdUsers.find((u) => u.role === "host") || createdUsers[0];
 
-  console.log("[Seed] Clearing existing demo studios...");
-  await Studio.deleteMany({ slug: { $in: demoStudios.map((s) => s.slug) } });
-
-  console.log("[Seed] Seeding studios...");
+  console.log("[Seed] Ensuring default 8 studios exist (idempotent, preserving user studios)...");
   for (const s of demoStudios) {
-    const studio = await Studio.create({
-      ...s,
-      host: hostUser._id,
-    });
-    console.log(`[Seed] Created Studio: ${studio.title} ($${studio.pricePerHour}/hr)`);
+    let studio = await Studio.findOne({ slug: s.slug });
+    if (!studio) {
+      studio = await Studio.create({
+        ...s,
+        host: hostUser._id,
+      });
+      console.log(`[Seed] Created Studio: ${studio.title} ($${studio.pricePerHour}/hr)`);
+    } else {
+      console.log(`[Seed] Studio already exists: ${studio.title}`);
+    }
   }
 
-  console.log("[Seed] Seeding complete!");
+  console.log("[Seed] Idempotent seeding complete!");
   await mongoose.disconnect();
 }
 

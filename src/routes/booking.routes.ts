@@ -4,6 +4,7 @@ import {
   getMyBookings,
   getHostBookings,
   updateBookingStatus,
+  updateBooking,
 } from "../controllers/booking.controller";
 import { authenticate } from "../middleware/auth";
 
@@ -14,6 +15,8 @@ router.use(authenticate);
 router.post("/", createBooking);
 router.get("/my-bookings", getMyBookings);
 router.get("/host-bookings", getHostBookings);
+router.put("/:id", updateBooking);
+router.patch("/:id", updateBooking);
 router.patch("/:id/status", updateBookingStatus);
 router.patch("/:id/cancel", updateBookingStatus);
 

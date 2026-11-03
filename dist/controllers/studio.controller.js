@@ -106,7 +106,7 @@ async function getAllStudios(req, res) {
 async function getFeaturedStudios(req, res) {
     try {
         const limitParam = req.query.limit ? parseInt(req.query.limit, 10) : undefined;
-        const limitNum = limitParam && !isNaN(limitParam) ? Math.min(50, Math.max(1, limitParam)) : 8;
+        const limitNum = limitParam && !isNaN(limitParam) ? Math.min(50, Math.max(1, limitParam)) : 50;
         if (mongoose_1.default.connection.readyState === 1) {
             const featured = await Studio_1.Studio.find({ isAvailable: true, featured: true })
                 .populate("host", "name email avatar")
@@ -245,7 +245,8 @@ async function updateStudio(req, res) {
         }
         const id = String(req.params.id);
         if (mongoose_1.default.connection.readyState === 1) {
-            const studio = await Studio_1.Studio.findById(id);
+            const isObjectId = mongoose_1.default.Types.ObjectId.isValid(id);
+            const studio = await (isObjectId ? Studio_1.Studio.findById(id) : Studio_1.Studio.findOne({ slug: id }));
             if (!studio) {
                 res.status(404).json({ error: "Studio not found" });
                 return;
@@ -257,11 +258,10 @@ async function updateStudio(req, res) {
                 });
                 return;
             }
-            Object.assign(studio, parsed.data);
-            await studio.save();
+            const updatedStudio = await Studio_1.Studio.findByIdAndUpdate(studio._id, { $set: parsed.data }, { new: true, runValidators: true }).populate("host", "name email avatar");
             res.status(200).json({
                 message: "Studio listing updated successfully",
-                studio,
+                studio: updatedStudio || studio,
             });
             return;
         }
@@ -296,7 +296,8 @@ async function deleteStudio(req, res) {
         }
         const id = String(req.params.id);
         if (mongoose_1.default.connection.readyState === 1) {
-            const studio = await Studio_1.Studio.findById(id);
+            const isObjectId = mongoose_1.default.Types.ObjectId.isValid(id);
+            const studio = await (isObjectId ? Studio_1.Studio.findById(id) : Studio_1.Studio.findOne({ slug: id }));
             if (!studio) {
                 res.status(404).json({ error: "Studio not found" });
                 return;
@@ -308,10 +309,10 @@ async function deleteStudio(req, res) {
                 });
                 return;
             }
-            await Studio_1.Studio.findByIdAndDelete(id);
+            await Studio_1.Studio.findByIdAndDelete(studio._id);
             res.status(200).json({
                 message: "Studio deleted successfully",
-                deletedId: id,
+                deletedId: studio._id.toString(),
             });
             return;
         }

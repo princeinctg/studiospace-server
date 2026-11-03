@@ -8,6 +8,8 @@ router.use(auth_1.authenticate);
 router.post("/", booking_controller_1.createBooking);
 router.get("/my-bookings", booking_controller_1.getMyBookings);
 router.get("/host-bookings", booking_controller_1.getHostBookings);
+router.put("/:id", booking_controller_1.updateBooking);
+router.patch("/:id", booking_controller_1.updateBooking);
 router.patch("/:id/status", booking_controller_1.updateBookingStatus);
 router.patch("/:id/cancel", booking_controller_1.updateBookingStatus);
 exports.default = router;

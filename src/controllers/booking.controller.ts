@@ -5,6 +5,7 @@ import { Studio } from "../models/Studio";
 import {
   createBookingSchema,
   updateBookingStatusSchema,
+  updateBookingSchema,
 } from "../validators/booking.validator";
 import { AuthenticatedRequest } from "../middleware/auth";
 import { store } from "../store/dataStore";
@@ -388,5 +389,202 @@ export async function updateBookingStatus(
   } catch (error: any) {
     console.error("Update Booking Status Error:", error);
     res.status(500).json({ error: "Failed to update booking status" });
+  }
+}
+
+export async function updateBooking(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const id = String(req.params.id);
+    const parsed = updateBookingSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        error: "Validation error",
+        details: parsed.error.issues.map((i) => i.message),
+      });
+      return;
+    }
+
+    const { date, startTime, endTime, guestCount, notes, status, paymentStatus } = parsed.data;
+
+    if (mongoose.connection.readyState === 1) {
+      const isObjectId = mongoose.Types.ObjectId.isValid(id);
+      const booking = await (isObjectId
+        ? Booking.findById(id).populate("studio")
+        : Booking.findOne({ id }).populate("studio"));
+      if (!booking) {
+        res.status(404).json({ error: "Booking not found" });
+        return;
+      }
+
+      const studio = booking.studio as any;
+      const isGuest = booking.guest.toString() === req.user.userId;
+      const isHost = studio && studio.host && studio.host.toString() === req.user.userId;
+      const isAdmin = req.user.role === "admin";
+
+      if (!isGuest && !isHost && !isAdmin) {
+        res.status(403).json({ error: "Forbidden: Not authorized to update this booking." });
+        return;
+      }
+
+      // Guest cannot alter status (except cancel) or paymentStatus directly
+      if (isGuest && !isHost && !isAdmin) {
+        if (status && status !== booking.status && status !== "cancelled") {
+          res.status(403).json({ error: "Guests are only permitted to cancel bookings or update schedule/details." });
+          return;
+        }
+      }
+
+      const newDate = date ? new Date(date) : new Date(booking.date);
+      const newStartTime = startTime || booking.startTime;
+      const newEndTime = endTime || booking.endTime;
+
+      // Double-booking conflict check if schedule or confirmation changed
+      if (date || startTime || endTime || (status === "confirmed" && booking.status !== "confirmed")) {
+        const bookingDate = new Date(newDate);
+        bookingDate.setHours(0, 0, 0, 0);
+        const nextDay = new Date(bookingDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        const startMins = toMinutes(newStartTime);
+        const endMins = toMinutes(newEndTime);
+
+        const existingConfirmed = await Booking.find({
+          _id: { $ne: booking._id },
+          studio: studio._id,
+          date: { $gte: bookingDate, $lt: nextDay },
+          status: "confirmed",
+        });
+
+        const hasConflict = existingConfirmed.some((existing) => {
+          const exStart = toMinutes(existing.startTime);
+          const exEnd = toMinutes(existing.endTime);
+          return startMins < exEnd && endMins > exStart;
+        });
+
+        if (hasConflict) {
+          res.status(409).json({
+            error: "Double-booking conflict: Another booking for this time slot is already confirmed.",
+          });
+          return;
+        }
+      }
+
+      // Recalculate duration & price if times changed
+      if (startTime || endTime) {
+        const startMins = toMinutes(newStartTime);
+        const endMins = toMinutes(newEndTime);
+        const durationHours = Math.round(((endMins - startMins) / 60) * 10) / 10;
+        booking.durationHours = durationHours;
+        const pricePerHour = studio.pricePerHour || 100;
+        booking.totalPrice = Math.round(durationHours * pricePerHour);
+      }
+
+      if (date) booking.date = newDate;
+      if (startTime) booking.startTime = startTime;
+      if (endTime) booking.endTime = endTime;
+      if (guestCount !== undefined) booking.guestCount = guestCount;
+      if (notes !== undefined) booking.notes = notes;
+      if (status && (isHost || isAdmin || status === "cancelled")) {
+        booking.status = status;
+      }
+      if (paymentStatus && (isHost || isAdmin)) {
+        booking.paymentStatus = paymentStatus;
+      }
+
+      await booking.save();
+
+      const populated = await Booking.findById(booking._id).populate(
+        "studio",
+        "title slug images location pricePerHour"
+      );
+
+      res.status(200).json({
+        message: "Booking updated successfully",
+        booking: populated || booking,
+      });
+      return;
+    }
+
+    // Local DataStore handling
+    const existing = store.getBookingById(id);
+    if (!existing) {
+      res.status(404).json({ error: "Booking not found" });
+      return;
+    }
+
+    const isGuest =
+      (existing.guest?.id || existing.guest?._id || existing.guest) === req.user.userId;
+    const studioHost =
+      existing.studio?.host?.id ||
+      existing.studio?.host?._id ||
+      existing.studio?.host;
+    const isHost = studioHost === req.user.userId;
+    const isAdmin = req.user.role === "admin";
+
+    if (!isGuest && !isHost && !isAdmin) {
+      res.status(403).json({ error: "Forbidden: Not authorized to update this booking." });
+      return;
+    }
+
+    if (isGuest && !isHost && !isAdmin && status && status !== existing.status && status !== "cancelled") {
+      res.status(403).json({ error: "Guests are only permitted to cancel bookings or update schedule/details." });
+      return;
+    }
+
+    const newDate = date || existing.date;
+    const newStartTime = startTime || existing.startTime;
+    const newEndTime = endTime || existing.endTime;
+
+    if (date || startTime || endTime || (status === "confirmed" && existing.status !== "confirmed")) {
+      const studioId = existing.studio?.id || existing.studio?._id || existing.studio;
+      const hasConflict = store.checkConflict(
+        studioId,
+        newDate,
+        newStartTime,
+        newEndTime,
+        id
+      );
+      if (hasConflict) {
+        res.status(409).json({
+          error: "Double-booking conflict: Another booking for this time slot is already confirmed or pending.",
+        });
+        return;
+      }
+    }
+
+    const updates: any = {};
+    if (date) updates.date = date;
+    if (startTime) updates.startTime = startTime;
+    if (endTime) updates.endTime = endTime;
+    if (guestCount !== undefined) updates.guestCount = guestCount;
+    if (notes !== undefined) updates.notes = notes;
+    if (status && (isHost || isAdmin || status === "cancelled")) updates.status = status;
+    if (paymentStatus && (isHost || isAdmin)) updates.paymentStatus = paymentStatus;
+
+    if (startTime || endTime) {
+      const startMins = toMinutes(newStartTime);
+      const endMins = toMinutes(newEndTime);
+      const durationHours = Math.round(((endMins - startMins) / 60) * 10) / 10;
+      updates.durationHours = durationHours;
+      const pricePerHour = existing.studio?.pricePerHour || 100;
+      updates.totalPrice = Math.round(durationHours * pricePerHour);
+    }
+
+    const updated = store.updateBooking(id, updates);
+    res.status(200).json({
+      message: "Booking updated successfully",
+      booking: updated,
+    });
+  } catch (error: any) {
+    console.error("Update Booking Error:", error);
+    res.status(500).json({ error: "Failed to update booking" });
   }
 }

@@ -94,6 +94,7 @@ app.use("/api/auth", auth_routes_1.default);
 app.use("/api/studios", studio_routes_1.default);
 app.use("/api/bookings", booking_routes_1.default);
 app.use("/api/bookmarks", bookmark_routes_1.default);
+app.use("/api/wishlist", bookmark_routes_1.default);
 // Root API welcome
 app.get("/api", (_req, res) => {
     res.status(200).json({

@@ -48,7 +48,10 @@ async function addBookmark(req, res) {
         }
         const studioId = String(req.params.studioId);
         if (mongoose_1.default.connection.readyState === 1) {
-            const studio = await Studio_1.Studio.findById(studioId);
+            const isObjectId = mongoose_1.default.Types.ObjectId.isValid(studioId);
+            const studio = await (isObjectId
+                ? Studio_1.Studio.findById(studioId)
+                : Studio_1.Studio.findOne({ $or: [{ slug: studioId }, { id: studioId }] }));
             if (!studio) {
                 res.status(404).json({ error: "Studio not found" });
                 return;
@@ -60,7 +63,8 @@ async function addBookmark(req, res) {
             }
             if (!user.bookmarks)
                 user.bookmarks = [];
-            const alreadySaved = user.bookmarks.some((b) => b.toString() === studioId);
+            const targetIdStr = studio._id.toString();
+            const alreadySaved = user.bookmarks.some((b) => b.toString() === targetIdStr);
             if (!alreadySaved) {
                 user.bookmarks.push(studio._id);
                 await user.save();
@@ -95,13 +99,18 @@ async function removeBookmark(req, res) {
         }
         const studioId = String(req.params.studioId);
         if (mongoose_1.default.connection.readyState === 1) {
+            const isObjectId = mongoose_1.default.Types.ObjectId.isValid(studioId);
+            const studio = await (isObjectId
+                ? Studio_1.Studio.findById(studioId)
+                : Studio_1.Studio.findOne({ $or: [{ slug: studioId }, { id: studioId }] }));
             const user = await User_1.User.findById(req.user.userId);
             if (!user) {
                 res.status(404).json({ error: "User not found" });
                 return;
             }
             if (user.bookmarks) {
-                user.bookmarks = user.bookmarks.filter((b) => b.toString() !== studioId);
+                const targetIdStr = studio ? studio._id.toString() : studioId;
+                user.bookmarks = user.bookmarks.filter((b) => b.toString() !== targetIdStr && b.toString() !== studioId);
                 await user.save();
             }
             res.status(200).json({

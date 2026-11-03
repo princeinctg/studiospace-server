@@ -55,7 +55,10 @@ export async function addBookmark(
     const studioId = String(req.params.studioId);
 
     if (mongoose.connection.readyState === 1) {
-      const studio = await Studio.findById(studioId);
+      const isObjectId = mongoose.Types.ObjectId.isValid(studioId);
+      const studio = await (isObjectId
+        ? Studio.findById(studioId)
+        : Studio.findOne({ $or: [{ slug: studioId }, { id: studioId }] }));
       if (!studio) {
         res.status(404).json({ error: "Studio not found" });
         return;
@@ -68,7 +71,8 @@ export async function addBookmark(
       }
 
       if (!user.bookmarks) user.bookmarks = [];
-      const alreadySaved = user.bookmarks.some((b) => b.toString() === studioId);
+      const targetIdStr = studio._id.toString();
+      const alreadySaved = user.bookmarks.some((b) => b.toString() === targetIdStr);
 
       if (!alreadySaved) {
         user.bookmarks.push(studio._id as any);
@@ -113,6 +117,11 @@ export async function removeBookmark(
     const studioId = String(req.params.studioId);
 
     if (mongoose.connection.readyState === 1) {
+      const isObjectId = mongoose.Types.ObjectId.isValid(studioId);
+      const studio = await (isObjectId
+        ? Studio.findById(studioId)
+        : Studio.findOne({ $or: [{ slug: studioId }, { id: studioId }] }));
+
       const user = await User.findById(req.user.userId);
       if (!user) {
         res.status(404).json({ error: "User not found" });
@@ -120,7 +129,10 @@ export async function removeBookmark(
       }
 
       if (user.bookmarks) {
-        user.bookmarks = user.bookmarks.filter((b) => b.toString() !== studioId);
+        const targetIdStr = studio ? studio._id.toString() : studioId;
+        user.bookmarks = user.bookmarks.filter(
+          (b) => b.toString() !== targetIdStr && b.toString() !== studioId
+        );
         await user.save();
       }
 
