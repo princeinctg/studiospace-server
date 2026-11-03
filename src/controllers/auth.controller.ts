@@ -295,16 +295,24 @@ export async function getMe(req: AuthenticatedRequest, res: Response): Promise<v
 }
 
 function resolveGoogleCallbackUrl(req: Request): string {
-  const configured = process.env.GOOGLE_CALLBACK_URL;
-  // If explicitly configured without the legacy mismatched /api/auth/google/callback path, respect it
-  if (configured && configured.trim() && !configured.includes("/api/auth/google/callback")) {
-    return configured.trim();
-  }
   const host = req.headers["x-forwarded-host"] || req.get("host") || "";
   if (typeof host === "string" && (host.includes("localhost") || host.includes("127.0.0.1"))) {
     const protocol = req.headers["x-forwarded-proto"] || req.protocol || "http";
     return `${protocol}://${host}/api/auth/google/callback`;
   }
+
+  // If this callback request arrived directly at /api/auth/google/callback, match it exactly
+  const originalUrl = req.originalUrl || req.url || "";
+  if (originalUrl.includes("/api/auth/google/callback")) {
+    return "https://studiospace-server-f9ek.onrender.com/api/auth/google/callback";
+  }
+
+  const configured = process.env.GOOGLE_CALLBACK_URL;
+  // If explicitly configured without the legacy mismatched /api/auth/google/callback path, respect it
+  if (configured && configured.trim() && !configured.includes("/api/auth/google/callback")) {
+    return configured.trim();
+  }
+
   // Production Render: Matches the Authorized Redirect URI configured in Google Cloud Console
   return "https://studiospace-server-f9ek.onrender.com/";
 }
