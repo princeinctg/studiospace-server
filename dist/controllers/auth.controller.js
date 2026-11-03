@@ -12,13 +12,13 @@ exports.googleAuth = googleAuth;
 exports.logout = logout;
 const mongoose_1 = __importDefault(require("mongoose"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const User_1 = require("../models/User");
 const jwt_1 = require("../utils/jwt");
 const auth_validator_1 = require("../validators/auth.validator");
 const database_1 = require("../config/database");
 const env_1 = require("../config/env");
 const dataStore_1 = require("../store/dataStore");
+const firebaseAdmin_1 = require("../config/firebaseAdmin");
 function setAuthCookies(res, token) {
     const isProd = process.env.NODE_ENV === "production";
     const cookieOptions = {
@@ -474,89 +474,95 @@ async function googleCallback(req, res) {
     }
 }
 /**
- * Handles JSON-based Google Authentication (for direct verified token / popup flow)
+ * Handles Firebase Google Authentication (Popup flow verified with Firebase Admin SDK).
+ * Strictly verifies the Firebase ID Token using Firebase Admin SDK.
+ * Never trusts user identity, email, or Google ID supplied directly by the frontend.
  */
 async function googleAuth(req, res) {
     try {
-        const { email, name, avatar, googleId, credential, role } = req.body;
-        let userEmail = email;
-        let userName = name;
-        let userAvatar = avatar;
-        let userGoogleId = googleId;
-        const assignedRole = role === "host" ? "host" : "guest";
-        // Verify Google ID token or Firebase Auth ID token if provided
-        if (credential) {
-            try {
-                const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
-                if (verifyRes.ok) {
-                    const payload = (await verifyRes.json());
-                    if (payload.email)
-                        userEmail = payload.email;
-                    if (payload.name)
-                        userName = payload.name;
-                    if (payload.picture)
-                        userAvatar = payload.picture;
-                    if (payload.sub)
-                        userGoogleId = payload.sub;
-                }
-                else {
-                    // Decode Firebase Auth JWT token if issued by Firebase
-                    const decoded = jsonwebtoken_1.default.decode(credential);
-                    if (decoded && decoded.email) {
-                        userEmail = decoded.email;
-                        if (decoded.name)
-                            userName = decoded.name;
-                        if (decoded.picture)
-                            userAvatar = decoded.picture;
-                        if (decoded.sub || decoded.user_id)
-                            userGoogleId = decoded.sub || decoded.user_id;
-                    }
-                }
-            }
-            catch {
-                // Fallback to request body
-            }
-        }
-        if (!userEmail) {
-            res.status(400).json({ error: "Email is required for Google Auth" });
+        // 1. Extract Firebase ID token from body or Authorization header
+        const token = req.body.credential ||
+            req.body.idToken ||
+            req.body.token ||
+            (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")
+                ? req.headers.authorization.split(" ")[1]
+                : null);
+        if (!token || typeof token !== "string" || !token.trim()) {
+            res.status(401).json({
+                error: "Missing Firebase ID token. Authentication requires a verified Google credential.",
+            });
             return;
         }
-        const normalizedEmail = userEmail.toLowerCase().trim();
+        // 2. Cryptographically verify the token using Firebase Admin SDK
+        let verifiedUser;
+        try {
+            verifiedUser = await (0, firebaseAdmin_1.verifyFirebaseIdToken)(token);
+        }
+        catch (verifyError) {
+            console.warn("[Firebase Admin] Token verification failed:", verifyError?.message || verifyError);
+            res.status(401).json({
+                error: "Invalid or expired Firebase ID token.",
+                details: verifyError?.message || "Token verification failed",
+            });
+            return;
+        }
+        // 3. Extract identity strictly from verified token claims
+        const normalizedEmail = verifiedUser.email.toLowerCase().trim();
+        const verifiedGoogleId = verifiedUser.uid;
+        const verifiedName = verifiedUser.name || "Google User";
+        const verifiedPicture = verifiedUser.picture || "";
+        // Role requested during registration (defaults to 'guest')
+        const requestedRole = req.body.role === "host" ? "host" : "guest";
         if (mongoose_1.default.connection.readyState !== 1) {
             await (0, database_1.connectDB)();
         }
+        // 4. Primary Production Engine: MongoDB Atlas
         if (mongoose_1.default.connection.readyState === 1) {
+            // Find existing user by verified Google ID or verified Email
             let user = await User_1.User.findOne({
-                $or: [{ googleId: userGoogleId }, { email: normalizedEmail }],
+                $or: [{ googleId: verifiedGoogleId }, { email: normalizedEmail }],
             });
             if (user) {
-                if (!user.googleId && userGoogleId)
-                    user.googleId = userGoogleId;
-                if (!user.avatar && userAvatar)
-                    user.avatar = userAvatar;
-                user.provider = "google";
-                await user.save();
+                // Existing user: Link Google ID and update avatar/provider without creating a duplicate
+                let hasChanges = false;
+                if (!user.googleId) {
+                    user.googleId = verifiedGoogleId;
+                    hasChanges = true;
+                }
+                if ((!user.avatar || user.avatar.includes("unsplash")) && verifiedPicture) {
+                    user.avatar = verifiedPicture;
+                    hasChanges = true;
+                }
+                if (user.provider !== "google" && !user.password) {
+                    user.provider = "google";
+                    hasChanges = true;
+                }
+                if (hasChanges) {
+                    await user.save();
+                }
             }
             else {
+                // New user: Register automatically in MongoDB Atlas
                 user = await User_1.User.create({
-                    name: userName || "Google User",
+                    name: verifiedName,
                     email: normalizedEmail,
-                    avatar: userAvatar ||
+                    googleId: verifiedGoogleId,
+                    avatar: verifiedPicture ||
                         "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
-                    role: assignedRole,
+                    role: requestedRole,
                     provider: "google",
-                    googleId: userGoogleId || "google_oauth_" + Date.now(),
                 });
             }
-            const token = (0, jwt_1.generateToken)({
+            // Generate application JWT maintaining existing session architecture
+            const appToken = (0, jwt_1.generateToken)({
                 userId: user._id.toString(),
                 email: user.email,
                 role: user.role,
             });
-            setAuthCookies(res, token);
+            setAuthCookies(res, appToken);
             res.status(200).json({
                 message: "Google login successful",
-                token,
+                token: appToken,
                 user: {
                     id: user._id,
                     name: user.name,
@@ -567,35 +573,34 @@ async function googleAuth(req, res) {
             });
             return;
         }
-        // Local DataStore Engine (dev fallback only)
+        // 5. Local DataStore Engine (Fallback when MongoDB offline)
         let user = dataStore_1.store.findUserByEmail(normalizedEmail);
         if (!user) {
             user = dataStore_1.store.createUser({
-                name: userName || "Google User",
+                name: verifiedName,
                 email: normalizedEmail,
-                avatar: userAvatar ||
-                    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
-                role: assignedRole,
+                avatar: verifiedPicture || "",
+                role: requestedRole,
                 provider: "google",
-                googleId: userGoogleId,
+                googleId: verifiedGoogleId,
             });
         }
         else {
             user.provider = "google";
-            if (userGoogleId && !user.googleId)
-                user.googleId = userGoogleId;
-            if (userAvatar && !user.avatar)
-                user.avatar = userAvatar;
+            if (!user.googleId)
+                user.googleId = verifiedGoogleId;
+            if (verifiedPicture && !user.avatar)
+                user.avatar = verifiedPicture;
         }
-        const token = (0, jwt_1.generateToken)({
+        const appToken = (0, jwt_1.generateToken)({
             userId: user.id,
             email: user.email,
             role: user.role,
         });
-        setAuthCookies(res, token);
+        setAuthCookies(res, appToken);
         res.status(200).json({
             message: "Google login successful",
-            token,
+            token: appToken,
             user: {
                 id: user.id,
                 name: user.name,
