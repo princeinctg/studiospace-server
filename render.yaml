@@ -15,7 +15,7 @@ services:
       - key: GOOGLE_CLIENT_ID
         value: 199695232756-9b1its7cgdvpc03e1uo875fcc1ccvu8d.apps.googleusercontent.com
       - key: GOOGLE_CALLBACK_URL
-        value: https://studiospace-server-f9ek.onrender.com/api/auth/google/callback
+        value: https://studiospace-server-f9ek.onrender.com/
       - key: JWT_EXPIRES_IN
         value: 7d
       # Sensitive credentials configured via Render Dashboard (sync: false)
