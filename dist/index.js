@@ -115,10 +115,18 @@ app.use((err, _req, res, _next) => {
         message: env_1.ENV.NODE_ENV === "development" ? err.message : undefined,
     });
 });
+const seed_1 = require("./seed/seed");
 if (!process.env.NETLIFY && process.env.NODE_ENV !== "test") {
     const PORT = Number(process.env.PORT) || Number(env_1.ENV.PORT) || 5000;
     const HOST = "0.0.0.0";
-    (0, database_1.connectDB)().finally(() => {
+    (0, database_1.connectDB)()
+        .then(async () => {
+        await (0, seed_1.ensureDefaultStudios)();
+    })
+        .catch((err) => {
+        console.warn("[Database] Connection non-fatal error:", err.message);
+    })
+        .finally(() => {
         app.listen(PORT, HOST, () => {
             console.log(`[StudioSpace Server] Listening on ${HOST}:${PORT} (process.env.PORT: ${process.env.PORT || "default"})`);
         });

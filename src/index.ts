@@ -123,15 +123,24 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
+import { ensureDefaultStudios } from "./seed/seed";
+
 if (!process.env.NETLIFY && process.env.NODE_ENV !== "test") {
   const PORT = Number(process.env.PORT) || Number(ENV.PORT) || 5000;
   const HOST = "0.0.0.0";
 
-  connectDB().finally(() => {
-    app.listen(PORT, HOST, () => {
-      console.log(`[StudioSpace Server] Listening on ${HOST}:${PORT} (process.env.PORT: ${process.env.PORT || "default"})`);
+  connectDB()
+    .then(async () => {
+      await ensureDefaultStudios();
+    })
+    .catch((err) => {
+      console.warn("[Database] Connection non-fatal error:", err.message);
+    })
+    .finally(() => {
+      app.listen(PORT, HOST, () => {
+        console.log(`[StudioSpace Server] Listening on ${HOST}:${PORT} (process.env.PORT: ${process.env.PORT || "default"})`);
+      });
     });
-  });
 
   // Graceful shutdown handling
   const handleExit = async () => {

@@ -34,7 +34,25 @@ async function createBooking(req, res) {
         const { studioId, date, startTime, endTime, guestCount, notes } = parsed.data;
         // Dual-Engine: If MongoDB connected, use Mongoose
         if (mongoose_1.default.connection.readyState === 1) {
-            const studio = await Studio_1.Studio.findById(studioId);
+            const DEMO_ID_MAP = {
+                "demo-1": "6ae996e6749893a06af61de3",
+                "demo-2": "6ae99720749893a06af61dfa",
+                "demo-3": "6ae99721749893a06af61dfc",
+                "demo-4": "6ae99721749893a06af61dfe",
+                "demo-5": "6ae983c20981efdd6935dded",
+                "manhattan-creative-photography-studio": "6ae983c20981efdd6935dded",
+                "demo-6": "6ae99721749893a06af61e00",
+                "demo-7": "6ae99722749893a06af61e02",
+                "demo-8": "6ae99722749893a06af61e04",
+            };
+            const resolvedStudioId = DEMO_ID_MAP[studioId] || studioId;
+            let studio = null;
+            if (mongoose_1.default.Types.ObjectId.isValid(resolvedStudioId)) {
+                studio = await Studio_1.Studio.findById(resolvedStudioId);
+            }
+            if (!studio) {
+                studio = await Studio_1.Studio.findOne({ slug: resolvedStudioId });
+            }
             if (!studio) {
                 res.status(404).json({ error: "Studio not found" });
                 return;

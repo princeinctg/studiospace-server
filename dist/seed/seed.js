@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.runSeed = runSeed;
+exports.ensureDefaultStudios = ensureDefaultStudios;
 const mongoose_1 = __importDefault(require("mongoose"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const env_1 = require("../config/env");
@@ -344,6 +345,33 @@ async function runSeed() {
     }
     console.log("[Seed] Idempotent seeding complete!");
     await mongoose_1.default.disconnect();
+}
+async function ensureDefaultStudios() {
+    if (mongoose_1.default.connection.readyState !== 1)
+        return;
+    try {
+        let hostUser = await User_1.User.findOne({ role: "host" });
+        if (!hostUser) {
+            hostUser = await User_1.User.findOne();
+        }
+        if (!hostUser)
+            return;
+        for (const s of demoStudios) {
+            const existing = await Studio_1.Studio.findOne({
+                $or: [{ slug: s.slug }, { title: s.title }],
+            });
+            if (!existing) {
+                await Studio_1.Studio.create({
+                    ...s,
+                    host: hostUser._id,
+                });
+                console.log(`[Seed] Auto-ensured default studio: ${s.title}`);
+            }
+        }
+    }
+    catch (error) {
+        console.warn("[Seed] ensureDefaultStudios warning:", error);
+    }
 }
 if (require.main === module) {
     runSeed()

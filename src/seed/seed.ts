@@ -345,6 +345,32 @@ export async function runSeed(): Promise<void> {
   await mongoose.disconnect();
 }
 
+export async function ensureDefaultStudios(): Promise<void> {
+  if (mongoose.connection.readyState !== 1) return;
+  try {
+    let hostUser = await User.findOne({ role: "host" });
+    if (!hostUser) {
+      hostUser = await User.findOne();
+    }
+    if (!hostUser) return;
+
+    for (const s of demoStudios) {
+      const existing = await Studio.findOne({
+        $or: [{ slug: s.slug }, { title: s.title }],
+      });
+      if (!existing) {
+        await Studio.create({
+          ...s,
+          host: hostUser._id,
+        });
+        console.log(`[Seed] Auto-ensured default studio: ${s.title}`);
+      }
+    }
+  } catch (error) {
+    console.warn("[Seed] ensureDefaultStudios warning:", error);
+  }
+}
+
 if (require.main === module) {
   runSeed()
     .then(() => process.exit(0))
