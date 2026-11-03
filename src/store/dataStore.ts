@@ -14,6 +14,7 @@ export interface StoredUser {
   phone?: string;
   bio?: string;
   googleId?: string;
+  provider?: "local" | "google";
   bookmarks?: string[];
   createdAt: string;
   updatedAt: string;

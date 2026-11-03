@@ -12,6 +12,7 @@ export interface IUser extends Document {
   phone?: string;
   bio?: string;
   googleId?: string;
+  provider?: "local" | "google";
   bookmarks?: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
@@ -60,6 +61,11 @@ const UserSchema = new Schema<IUser>(
     googleId: {
       type: String,
       sparse: true,
+    },
+    provider: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
     },
     bookmarks: [
       {

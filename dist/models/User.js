@@ -81,6 +81,11 @@ const UserSchema = new mongoose_1.Schema({
         type: String,
         sparse: true,
     },
+    provider: {
+        type: String,
+        enum: ["local", "google"],
+        default: "local",
+    },
     bookmarks: [
         {
             type: mongoose_1.Schema.Types.ObjectId,

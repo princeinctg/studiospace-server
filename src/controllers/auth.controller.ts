@@ -410,6 +410,7 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
       if (user) {
         if (!user.googleId) user.googleId = googleUser.sub;
         if (!user.avatar && googleUser.picture) user.avatar = googleUser.picture;
+        user.provider = "google";
         await user.save();
       } else {
         // Automatically create first-time Google user in MongoDB Atlas
@@ -419,17 +420,24 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
           googleId: googleUser.sub,
           avatar: googleUser.picture || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
           role: "guest",
+          provider: "google",
         });
       }
     } else {
       // Local fallback
       user = store.findUserByEmail(normalizedEmail);
-      if (!user) {
+      if (user) {
+        if (!user.googleId) user.googleId = googleUser.sub;
+        if (!user.avatar && googleUser.picture) user.avatar = googleUser.picture;
+        user.provider = "google";
+      } else {
         user = store.createUser({
           name: googleUser.name || "Google User",
           email: normalizedEmail,
           avatar: googleUser.picture || "",
+          googleId: googleUser.sub,
           role: "guest",
+          provider: "google",
         });
       }
     }
@@ -443,7 +451,18 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
     setAuthCookies(res, token);
 
     // Redirect to frontend dashboard with token
-    res.redirect(`${returnClient}/dashboard?auth_token=${token}`);
+    let targetBase = returnClient.startsWith("http") ? returnClient : `${ENV.CLIENT_URL}/${returnClient.replace(/^\/+/, "")}`;
+    try {
+      const parsed = new URL(targetBase);
+      if (parsed.pathname === "/" || parsed.pathname === "") {
+        parsed.pathname = "/dashboard";
+      }
+      parsed.searchParams.set("auth_token", token);
+      res.redirect(parsed.toString());
+    } catch {
+      const cleanBase = targetBase.replace(/\/+$/, "");
+      res.redirect(`${cleanBase}/dashboard?auth_token=${token}`);
+    }
   } catch (error: any) {
     console.error("[Google OAuth] Callback error:", error.message);
     res.redirect(`${returnClient}/login?error=Google+login+processing+failed`);
@@ -496,6 +515,7 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
       if (user) {
         if (!user.googleId && userGoogleId) user.googleId = userGoogleId;
         if (!user.avatar && userAvatar) user.avatar = userAvatar;
+        user.provider = "google";
         await user.save();
       } else {
         user = await User.create({
@@ -505,6 +525,7 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
             userAvatar ||
             "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
           role: "guest",
+          provider: "google",
           googleId: userGoogleId || "google_oauth_" + Date.now(),
         });
       }
@@ -541,7 +562,13 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
           userAvatar ||
           "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
         role: "guest",
+        provider: "google",
+        googleId: userGoogleId,
       });
+    } else {
+      user.provider = "google";
+      if (userGoogleId && !user.googleId) user.googleId = userGoogleId;
+      if (userAvatar && !user.avatar) user.avatar = userAvatar;
     }
 
     const token = generateToken({

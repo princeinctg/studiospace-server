@@ -374,6 +374,7 @@ async function googleCallback(req, res) {
                     user.googleId = googleUser.sub;
                 if (!user.avatar && googleUser.picture)
                     user.avatar = googleUser.picture;
+                user.provider = "google";
                 await user.save();
             }
             else {
@@ -384,18 +385,28 @@ async function googleCallback(req, res) {
                     googleId: googleUser.sub,
                     avatar: googleUser.picture || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
                     role: "guest",
+                    provider: "google",
                 });
             }
         }
         else {
             // Local fallback
             user = dataStore_1.store.findUserByEmail(normalizedEmail);
-            if (!user) {
+            if (user) {
+                if (!user.googleId)
+                    user.googleId = googleUser.sub;
+                if (!user.avatar && googleUser.picture)
+                    user.avatar = googleUser.picture;
+                user.provider = "google";
+            }
+            else {
                 user = dataStore_1.store.createUser({
                     name: googleUser.name || "Google User",
                     email: normalizedEmail,
                     avatar: googleUser.picture || "",
+                    googleId: googleUser.sub,
                     role: "guest",
+                    provider: "google",
                 });
             }
         }
@@ -406,7 +417,19 @@ async function googleCallback(req, res) {
         });
         setAuthCookies(res, token);
         // Redirect to frontend dashboard with token
-        res.redirect(`${returnClient}/dashboard?auth_token=${token}`);
+        let targetBase = returnClient.startsWith("http") ? returnClient : `${env_1.ENV.CLIENT_URL}/${returnClient.replace(/^\/+/, "")}`;
+        try {
+            const parsed = new URL(targetBase);
+            if (parsed.pathname === "/" || parsed.pathname === "") {
+                parsed.pathname = "/dashboard";
+            }
+            parsed.searchParams.set("auth_token", token);
+            res.redirect(parsed.toString());
+        }
+        catch {
+            const cleanBase = targetBase.replace(/\/+$/, "");
+            res.redirect(`${cleanBase}/dashboard?auth_token=${token}`);
+        }
     }
     catch (error) {
         console.error("[Google OAuth] Callback error:", error.message);
@@ -456,6 +479,7 @@ async function googleAuth(req, res) {
                     user.googleId = userGoogleId;
                 if (!user.avatar && userAvatar)
                     user.avatar = userAvatar;
+                user.provider = "google";
                 await user.save();
             }
             else {
@@ -465,6 +489,7 @@ async function googleAuth(req, res) {
                     avatar: userAvatar ||
                         "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
                     role: "guest",
+                    provider: "google",
                     googleId: userGoogleId || "google_oauth_" + Date.now(),
                 });
             }
@@ -496,7 +521,16 @@ async function googleAuth(req, res) {
                 avatar: userAvatar ||
                     "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
                 role: "guest",
+                provider: "google",
+                googleId: userGoogleId,
             });
+        }
+        else {
+            user.provider = "google";
+            if (userGoogleId && !user.googleId)
+                user.googleId = userGoogleId;
+            if (userAvatar && !user.avatar)
+                user.avatar = userAvatar;
         }
         const token = (0, jwt_1.generateToken)({
             userId: user.id,
