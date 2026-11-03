@@ -20,8 +20,29 @@ exports.createBookingSchema = zod_1.z
     message: "End time must be later than start time",
     path: ["endTime"],
 });
+const bookingStatusEnum = zod_1.z.enum([
+    "pending",
+    "confirmed",
+    "cancelled",
+    "completed",
+    "PENDING",
+    "CONFIRMED",
+    "CANCELLED",
+    "COMPLETED",
+]);
+const paymentStatusEnum = zod_1.z.enum([
+    "UNPAID",
+    "PAID",
+    "VOIDED",
+    "unpaid",
+    "paid",
+    "voided",
+    "refunded",
+    "REFUNDED",
+]);
 exports.updateBookingStatusSchema = zod_1.z.object({
-    status: zod_1.z.enum(["pending", "confirmed", "cancelled", "completed"]),
+    status: bookingStatusEnum.optional(),
+    paymentStatus: paymentStatusEnum.optional(),
     cancellationReason: zod_1.z.string().optional(),
 });
 exports.updateBookingSchema = zod_1.z
@@ -31,8 +52,8 @@ exports.updateBookingSchema = zod_1.z
     endTime: zod_1.z.string().regex(timeRegex, "Invalid end time format (HH:mm)").optional(),
     guestCount: zod_1.z.number().int().min(1, "At least 1 guest required").optional(),
     notes: zod_1.z.string().max(1000).optional(),
-    status: zod_1.z.enum(["pending", "confirmed", "cancelled", "completed"]).optional(),
-    paymentStatus: zod_1.z.enum(["unpaid", "paid", "refunded"]).optional(),
+    status: bookingStatusEnum.optional(),
+    paymentStatus: paymentStatusEnum.optional(),
 })
     .refine((data) => {
     if (data.startTime && data.endTime) {

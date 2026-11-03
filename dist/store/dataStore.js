@@ -579,11 +579,14 @@ class DataStore {
     getBookingById(id) {
         return this.db.bookings.find((b) => b.id === id || b._id === id);
     }
-    updateBookingStatus(id, status, reason) {
+    updateBookingStatus(id, status, reason, paymentStatus) {
         const booking = this.db.bookings.find((b) => b.id === id || b._id === id);
         if (!booking)
             return null;
-        booking.status = status;
+        if (status)
+            booking.status = status;
+        if (paymentStatus)
+            booking.paymentStatus = paymentStatus;
         if (reason)
             booking.cancellationReason = reason;
         booking.updatedAt = new Date().toISOString();

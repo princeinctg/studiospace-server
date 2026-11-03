@@ -23,8 +23,31 @@ export const createBookingSchema = z
     }
   );
 
+const bookingStatusEnum = z.enum([
+  "pending",
+  "confirmed",
+  "cancelled",
+  "completed",
+  "PENDING",
+  "CONFIRMED",
+  "CANCELLED",
+  "COMPLETED",
+]);
+
+const paymentStatusEnum = z.enum([
+  "UNPAID",
+  "PAID",
+  "VOIDED",
+  "unpaid",
+  "paid",
+  "voided",
+  "refunded",
+  "REFUNDED",
+]);
+
 export const updateBookingStatusSchema = z.object({
-  status: z.enum(["pending", "confirmed", "cancelled", "completed"]),
+  status: bookingStatusEnum.optional(),
+  paymentStatus: paymentStatusEnum.optional(),
   cancellationReason: z.string().optional(),
 });
 
@@ -35,8 +58,8 @@ export const updateBookingSchema = z
     endTime: z.string().regex(timeRegex, "Invalid end time format (HH:mm)").optional(),
     guestCount: z.number().int().min(1, "At least 1 guest required").optional(),
     notes: z.string().max(1000).optional(),
-    status: z.enum(["pending", "confirmed", "cancelled", "completed"]).optional(),
-    paymentStatus: z.enum(["unpaid", "paid", "refunded"]).optional(),
+    status: bookingStatusEnum.optional(),
+    paymentStatus: paymentStatusEnum.optional(),
   })
   .refine(
     (data) => {

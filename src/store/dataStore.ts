@@ -62,8 +62,8 @@ export interface StoredBooking {
   endTime: string;
   durationHours: number;
   totalPrice: number;
-  status: "pending" | "confirmed" | "cancelled" | "completed";
-  paymentStatus: "unpaid" | "paid" | "refunded";
+  status: "pending" | "confirmed" | "cancelled" | "completed" | string;
+  paymentStatus: "UNPAID" | "PAID" | "VOIDED" | "unpaid" | "paid" | "voided" | "refunded" | string;
   guestCount: number;
   notes?: string;
   cancellationReason?: string;
@@ -701,13 +701,15 @@ class DataStore {
 
   updateBookingStatus(
     id: string,
-    status: "pending" | "confirmed" | "cancelled" | "completed",
-    reason?: string
+    status?: "pending" | "confirmed" | "cancelled" | "completed" | string,
+    reason?: string,
+    paymentStatus?: string
   ): StoredBooking | null {
     const booking = this.db.bookings.find((b) => b.id === id || b._id === id);
     if (!booking) return null;
 
-    booking.status = status;
+    if (status) booking.status = status as any;
+    if (paymentStatus) booking.paymentStatus = paymentStatus as any;
     if (reason) booking.cancellationReason = reason;
     booking.updatedAt = new Date().toISOString();
     this.save();

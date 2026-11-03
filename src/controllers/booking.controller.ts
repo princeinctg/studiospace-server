@@ -294,7 +294,7 @@ export async function updateBookingStatus(
       return;
     }
 
-    const { status, cancellationReason } = parsed.data;
+    const { status, paymentStatus, cancellationReason } = parsed.data;
 
     if (mongoose.connection.readyState === 1) {
       const booking = await Booking.findById(id).populate("studio");
@@ -313,12 +313,12 @@ export async function updateBookingStatus(
         return;
       }
 
-      if (isGuest && !isHost && !isAdmin && status !== "cancelled") {
+      if (isGuest && !isHost && !isAdmin && status && status.toLowerCase() !== "cancelled") {
         res.status(403).json({ error: "Guests are only permitted to cancel bookings." });
         return;
       }
 
-      if (status === "confirmed") {
+      if (status && status.toLowerCase() === "confirmed") {
         const bookingDate = new Date(booking.date);
         bookingDate.setHours(0, 0, 0, 0);
         const nextDay = new Date(bookingDate);
@@ -348,7 +348,15 @@ export async function updateBookingStatus(
         }
       }
 
-      booking.status = status;
+      if (status) {
+        booking.status = status.toLowerCase() as any;
+      }
+      if (paymentStatus && (isHost || isAdmin)) {
+        booking.paymentStatus = paymentStatus.toUpperCase() as any;
+      }
+      if (booking.status === "cancelled" && (!booking.paymentStatus || booking.paymentStatus === "UNPAID" || booking.paymentStatus === "unpaid")) {
+        booking.paymentStatus = "VOIDED";
+      }
       if (cancellationReason) {
         booking.cancellationReason = cancellationReason;
       }
@@ -356,7 +364,7 @@ export async function updateBookingStatus(
       await booking.save();
 
       res.status(200).json({
-        message: `Booking status updated to ${status}`,
+        message: `Booking status updated successfully`,
         booking,
       });
       return;
@@ -407,14 +415,22 @@ export async function updateBookingStatus(
       }
     }
 
-    const updated = store.updateBookingStatus(id, status, cancellationReason);
+    const updated = store.updateBookingStatus(
+      id,
+      status ? (status.toLowerCase() as any) : undefined,
+      cancellationReason,
+      paymentStatus ? (paymentStatus.toUpperCase() as any) : undefined
+    );
     if (!updated) {
       res.status(404).json({ error: "Booking not found" });
       return;
     }
+    if (updated.status === "cancelled" && (!updated.paymentStatus || updated.paymentStatus === "UNPAID" || updated.paymentStatus === "unpaid")) {
+      updated.paymentStatus = "VOIDED";
+    }
 
     res.status(200).json({
-      message: `Booking status updated to ${status}`,
+      message: `Booking status updated successfully`,
       booking: updated,
     });
   } catch (error: any) {

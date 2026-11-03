@@ -1,7 +1,24 @@
 import mongoose, { Document, Schema, Model, Types } from "mongoose";
 
-export type BookingStatus = "pending" | "confirmed" | "cancelled" | "completed";
-export type PaymentStatus = "unpaid" | "paid" | "refunded";
+export type BookingStatus =
+  | "pending"
+  | "confirmed"
+  | "cancelled"
+  | "completed"
+  | "PENDING"
+  | "CONFIRMED"
+  | "CANCELLED"
+  | "COMPLETED";
+
+export type PaymentStatus =
+  | "UNPAID"
+  | "PAID"
+  | "VOIDED"
+  | "unpaid"
+  | "paid"
+  | "voided"
+  | "refunded"
+  | "REFUNDED";
 
 export interface IBooking extends Document {
   guest: Types.ObjectId;
@@ -61,14 +78,33 @@ const BookingSchema = new Schema<IBooking>(
     },
     status: {
       type: String,
-      enum: ["pending", "confirmed", "cancelled", "completed"],
+      enum: [
+        "pending",
+        "confirmed",
+        "cancelled",
+        "completed",
+        "PENDING",
+        "CONFIRMED",
+        "CANCELLED",
+        "COMPLETED",
+      ],
       default: "pending",
       index: true,
     },
     paymentStatus: {
       type: String,
-      enum: ["unpaid", "paid", "refunded"],
-      default: "unpaid",
+      enum: [
+        "UNPAID",
+        "PAID",
+        "VOIDED",
+        "unpaid",
+        "paid",
+        "voided",
+        "refunded",
+        "REFUNDED",
+      ],
+      default: "UNPAID",
+      index: true,
     },
     guestCount: {
       type: Number,
